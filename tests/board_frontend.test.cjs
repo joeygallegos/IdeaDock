@@ -289,6 +289,9 @@ test('View only touch pans with one finger and pinches around the moving midpoin
   canvas.listeners.pointerup({ ...touch(1, 150, 160), type: 'pointerup' });
   assert.deepEqual(C.clone(app.board.view), { x: 30, y: 30, zoom: 1 });
 
+  // An iPad in landscape can be past the responsive breakpoint and still need
+  // native two-finger camera navigation while its editing controls are shown.
+  app.readOnly = false;
   canvas.listeners.pointerdown(touch(2, 100, 100));
   canvas.listeners.pointerdown(touch(3, 200, 100));
   canvas.listeners.pointermove(touch(2, 80, 80));

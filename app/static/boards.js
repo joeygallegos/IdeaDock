@@ -842,21 +842,13 @@ class BoardWorkspace {
   pointerDown(event) {
     if (!this.board) return;
     if (event.pointerType === 'touch') {
-      if (this.readOnly && this.pointers.size === 1 && this.gesture?.kind === 'pan') {
-        const previous = this.gesture;
-        const first = [...this.pointers.values()][0];
-        const r = $('canvas').getBoundingClientRect();
-        this.board.view = {
-          ...previous.view,
-          x: previous.view.x + first.x - r.left - previous.start.x,
-          y: previous.view.y + first.y - r.top - previous.start.y
-        };
-        this.view();
-      }
       this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (this.pointers.size === 2 && this.readOnly) {
-        const points = [...this.pointers.values()];
-        this.gesture = null;
+      // Keep two-finger navigation available on iPads in both responsive
+      // modes. Their CSS viewport can exceed the small-screen breakpoint, but
+      // pinch and two-finger pan remain navigation rather than board edits.
+      if (this.pointers.size >= 2) {
+        if (this.gesture?.objects) this.board.objects = this.gesture.objects;
+        const points = [...this.pointers.values()].slice(0, 2);
         this.gesture = {
           kind: 'touch-navigation',
           midpoint: this.midpoint(points[0], points[1]),
@@ -864,18 +856,6 @@ class BoardWorkspace {
           view: C.clone(this.board.view)
         };
         event.preventDefault();
-        $('canvas').setPointerCapture(event.pointerId);
-        return;
-      }
-      if (this.readOnly && this.pointers.size === 1 && this.gesture?.kind === 'touch-navigation') {
-        const [pointer] = this.pointers.values();
-        const r = $('canvas').getBoundingClientRect();
-        this.gesture = {
-          kind: 'pan', start: { x: pointer.x - r.left, y: pointer.y - r.top },
-          view: C.clone(this.board.view)
-        };
-        event.preventDefault();
-        $('canvas').setPointerCapture(event.pointerId);
         return;
       }
       // On touch screens the first finger pans in browse mode. A second finger
@@ -887,10 +867,10 @@ class BoardWorkspace {
           view: C.clone(this.board.view)
         };
         event.preventDefault();
-        $('canvas').setPointerCapture(event.pointerId);
         return;
       }
-      if (!this.readOnly) return;
+      if (this.gesture?.kind === 'touch-navigation') this.gesture = null;
+      if (this.readOnly) return;
     }
     if (![0, 1].includes(event.button)) return;
     const node = event.target.closest('.object'), r = $('canvas').getBoundingClientRect(), start = {
@@ -950,7 +930,7 @@ class BoardWorkspace {
         this.view();
         return;
       }
-      if (g.kind === 'pan' && this.pointers.size === 1) {
+      if (g.kind === 'pan' && this.readOnly && this.pointers.size === 1) {
         const r = $('canvas').getBoundingClientRect();
         this.board.view = {
           ...g.view,
@@ -1034,7 +1014,7 @@ class BoardWorkspace {
       }
       this.pointers.delete(event.pointerId);
       if (this.gesture?.kind === 'touch-navigation') {
-        if (this.pointers.size === 1) {
+        if (this.readOnly && this.pointers.size === 1) {
           const [pointer] = this.pointers.values();
           const r = $('canvas').getBoundingClientRect();
           this.gesture = {
