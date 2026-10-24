@@ -58,6 +58,7 @@ function workspace() {
   const app = Object.create(context.window.BoardWorkspace.prototype);
   app.project = 1; app.board = { id: 1, name: 'Local', revision: 1, objects: [{ id: 'text', type: 'text', text: 'local', x: 0, y: 0, width: 100, height: 40 }], view: { x: 0, y: 0, zoom: 1 }, assets: [] };
   app.boards = [app.board]; app.saveState = new C.SaveState(1); app.saveState.edit(); app.saving = false; app.readOnly = false; app.selected = new Set(['text']); app.history = new C.History(); app.uploads = [];
+  app.pointers = new Map();
   app.render = () => {}; app.schedule = () => { app.scheduled = (app.scheduled || 0) + 1; };
   app.askConfirm = async () => true;
   return { app, node, context };
@@ -273,6 +274,33 @@ test('middle-button drag pans even over an object without selecting or moving it
   assert.deepEqual(app.board.objects, geometry);
   assert.equal(app.selected.size, 0);
   assert.equal(app.history.past.length, 0);
+});
+
+test('View only touch pans with one finger and pinches around the moving midpoint without editing objects', () => {
+  const { app, node } = interactionWorkspace();
+  app.readOnly = true;
+  const wasDirty = app.saveState.dirty;
+  app.board.view = { x: 0, y: 0, zoom: 1 };
+  const geometry = C.clone(app.board.objects), canvas = node('canvas');
+  const touch = (pointerId, x, y) => ({ pointerType: 'touch', pointerId, button: 0, clientX: x, clientY: y, target: canvas, preventDefault() {} });
+
+  canvas.listeners.pointerdown(touch(1, 120, 130));
+  canvas.listeners.pointermove(touch(1, 150, 160));
+  canvas.listeners.pointerup({ ...touch(1, 150, 160), type: 'pointerup' });
+  assert.deepEqual(C.clone(app.board.view), { x: 30, y: 30, zoom: 1 });
+
+  canvas.listeners.pointerdown(touch(2, 100, 100));
+  canvas.listeners.pointerdown(touch(3, 200, 100));
+  canvas.listeners.pointermove(touch(2, 80, 80));
+  canvas.listeners.pointermove(touch(3, 240, 120));
+  canvas.listeners.pointerup({ ...touch(3, 240, 120), type: 'pointerup' });
+
+  assert.ok(app.board.view.zoom > 1);
+  assert.ok(Number.isFinite(app.board.view.x));
+  assert.ok(Number.isFinite(app.board.view.y));
+  assert.deepEqual(app.board.objects, geometry);
+  assert.equal(app.history.past.length, 0);
+  assert.equal(app.saveState.dirty, wasDirty);
 });
 
 for (const shiftKey of [false, true]) {

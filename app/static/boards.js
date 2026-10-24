@@ -35,6 +35,7 @@ class BoardWorkspace {
     this.readOnly = matchMedia('(max-width: 899px)').matches;
     this.uploads = [];
     this.gesture = null;
+    this.pointers = new Map();
     this.loadVersion = 0;
     this.bind();
     this.mode();
@@ -839,7 +840,59 @@ class BoardWorkspace {
   }
 
   pointerDown(event) {
-    if (!this.board || ![0, 1].includes(event.button)) return;
+    if (!this.board) return;
+    if (event.pointerType === 'touch') {
+      if (this.readOnly && this.pointers.size === 1 && this.gesture?.kind === 'pan') {
+        const previous = this.gesture;
+        const first = [...this.pointers.values()][0];
+        const r = $('canvas').getBoundingClientRect();
+        this.board.view = {
+          ...previous.view,
+          x: previous.view.x + first.x - r.left - previous.start.x,
+          y: previous.view.y + first.y - r.top - previous.start.y
+        };
+        this.view();
+      }
+      this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (this.pointers.size === 2 && this.readOnly) {
+        const points = [...this.pointers.values()];
+        this.gesture = null;
+        this.gesture = {
+          kind: 'touch-navigation',
+          midpoint: this.midpoint(points[0], points[1]),
+          distance: this.distance(points[0], points[1]),
+          view: C.clone(this.board.view)
+        };
+        event.preventDefault();
+        $('canvas').setPointerCapture(event.pointerId);
+        return;
+      }
+      if (this.readOnly && this.pointers.size === 1 && this.gesture?.kind === 'touch-navigation') {
+        const [pointer] = this.pointers.values();
+        const r = $('canvas').getBoundingClientRect();
+        this.gesture = {
+          kind: 'pan', start: { x: pointer.x - r.left, y: pointer.y - r.top },
+          view: C.clone(this.board.view)
+        };
+        event.preventDefault();
+        $('canvas').setPointerCapture(event.pointerId);
+        return;
+      }
+      // On touch screens the first finger pans in browse mode. A second finger
+      // upgrades that gesture to pinch navigation without ever editing objects.
+      if (this.readOnly && this.pointers.size === 1) {
+        this.gesture = {
+          kind: 'pan',
+          start: { x: event.clientX - $('canvas').getBoundingClientRect().left, y: event.clientY - $('canvas').getBoundingClientRect().top },
+          view: C.clone(this.board.view)
+        };
+        event.preventDefault();
+        $('canvas').setPointerCapture(event.pointerId);
+        return;
+      }
+      if (!this.readOnly) return;
+    }
+    if (![0, 1].includes(event.button)) return;
     const node = event.target.closest('.object'), r = $('canvas').getBoundingClientRect(), start = {
       x: event.clientX - r.left, y: event.clientY - r.top
     };
@@ -880,6 +933,34 @@ class BoardWorkspace {
   pointerMove(event) {
     const g = this.gesture;
     if (!g || !this.board) return;
+    if (event.pointerType === 'touch' && this.pointers.has(event.pointerId)) {
+      this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (g.kind === 'touch-navigation' && this.pointers.size >= 2) {
+        const points = [...this.pointers.values()].slice(0, 2), r = $('canvas').getBoundingClientRect();
+        const midpoint = this.midpoint(points[0], points[1]);
+        const localMidpoint = { x: midpoint.x - r.left, y: midpoint.y - r.top };
+        const startMidpoint = { x: g.midpoint.x - r.left, y: g.midpoint.y - r.top };
+        const scale = Math.max(.05, Math.min(5, g.view.zoom * this.distance(points[0], points[1]) / g.distance)) / g.view.zoom;
+        const anchored = C.zoomAt(g.view, scale, startMidpoint.x, startMidpoint.y);
+        this.board.view = {
+          ...anchored,
+          x: anchored.x + localMidpoint.x - startMidpoint.x,
+          y: anchored.y + localMidpoint.y - startMidpoint.y
+        };
+        this.view();
+        return;
+      }
+      if (g.kind === 'pan' && this.pointers.size === 1) {
+        const r = $('canvas').getBoundingClientRect();
+        this.board.view = {
+          ...g.view,
+          x: g.view.x + event.clientX - r.left - g.start.x,
+          y: g.view.y + event.clientY - r.top - g.start.y
+        };
+        this.view();
+        return;
+      }
+    }
     const r = $('canvas').getBoundingClientRect(), now = {
       x: event.clientX - r.left, y: event.clientY - r.top
     }, dx = now.x - g.start.x, dy = now.y - g.start.y;
@@ -919,7 +1000,52 @@ class BoardWorkspace {
     }
   }
 
-  pointerUp() {
+  midpoint(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  pointerUp(event) {
+    if (event?.pointerType === 'touch') {
+      if (event.type === 'pointercancel') {
+        this.pointers.clear();
+        this.gesture = null;
+        $('marquee').hidden = true;
+        return;
+      }
+      this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (this.gesture?.kind === 'touch-navigation' && this.pointers.size >= 2) {
+        const points = [...this.pointers.values()].slice(0, 2), r = $('canvas').getBoundingClientRect();
+        const midpoint = this.midpoint(points[0], points[1]);
+        const localMidpoint = { x: midpoint.x - r.left, y: midpoint.y - r.top };
+        const startMidpoint = { x: this.gesture.midpoint.x - r.left, y: this.gesture.midpoint.y - r.top };
+        const end = this.gesture;
+        const pinchZoom = Math.max(.05, Math.min(5, end.view.zoom * this.distance(points[0], points[1]) / end.distance));
+        const view = C.zoomAt(end.view, pinchZoom / end.view.zoom, startMidpoint.x, startMidpoint.y);
+        this.board.view = {
+          ...view,
+          x: view.x + localMidpoint.x - startMidpoint.x,
+          y: view.y + localMidpoint.y - startMidpoint.y
+        };
+        this.view();
+      }
+      this.pointers.delete(event.pointerId);
+      if (this.gesture?.kind === 'touch-navigation') {
+        if (this.pointers.size === 1) {
+          const [pointer] = this.pointers.values();
+          const r = $('canvas').getBoundingClientRect();
+          this.gesture = {
+            kind: 'pan', start: { x: pointer.x - r.left, y: pointer.y - r.top },
+            view: C.clone(this.board.view)
+          };
+        } else this.gesture = null;
+        $('marquee').hidden = true;
+        return;
+      }
+    }
     const g = this.gesture;
     if (!g) return;
     this.gesture = null;
@@ -1134,8 +1260,8 @@ class BoardWorkspace {
     bind('dismiss-conflict', () => $('conflict').close());
     $('canvas').addEventListener('pointerdown', e => this.pointerDown(e));
     $('canvas').addEventListener('pointermove', e => this.pointerMove(e));
-    $('canvas').addEventListener('pointerup', () => this.pointerUp());
-    $('canvas').addEventListener('pointercancel', () => this.pointerUp());
+    $('canvas').addEventListener('pointerup', e => this.pointerUp(e));
+    $('canvas').addEventListener('pointercancel', e => this.pointerUp(e));
     $('canvas').addEventListener('wheel', event => {
       if (!this.board) return;
       event.preventDefault();
@@ -1184,6 +1310,7 @@ class BoardWorkspace {
     });
     window.addEventListener('blur', () => {
       this.space = false;
+      this.pointers.clear();
       this.pointerUp();
       this.tools();
     });
