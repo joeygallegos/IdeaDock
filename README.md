@@ -184,6 +184,8 @@ Plan backyard party #house #family -idea
 
 Choose a project on the home screen, then use **Create board** in **Project boards**. Name the board to create it, then upload, drop, or paste images inside the workspace. Existing named boards appear under their project. Selecting a project never creates a board; cancelling the name dialog creates nothing. The project chooser includes completed projects. Projects use the existing Epic records; boards do not create copies of notes or tasks.
 
+The focused item editor also offers **Project boards** links for each project currently attached to the item. Save project changes first; each link opens that project's board naming step in a new tab so the editor stays open.
+
 The image deck combines uploads from all project items (including completed items) with images uploaded directly to the project. Select an image and choose **Add to board**, or drag it onto the canvas. Uploading into the deck adds a reusable source image; dropping or pasting an image onto a board also places it there. Multiple boards and placements share source files without changing them.
 
 Use **Select** for objects and marquee selection, Shift to extend selection, and **Hand**, Space-drag, middle-mouse drag, or trackpad scrolling to pan. Arrow keys move selected objects by one canvas unit; Shift+Arrow moves by ten. Image size controls preserve proportions. **Add object** creates text labels or color swatches; swatches accept a picker, hex value, or a color sampled from an image. Undo/redo applies during the current editing session. Smaller screens show an explicit **View only** workspace with browsing, pan, and zoom.

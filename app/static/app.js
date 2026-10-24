@@ -217,6 +217,10 @@ Call bank about payoff #money #house -task @chase !high due:2026-04-20`,
       }
     },
 
+    boardCreateUrl(projectId) {
+      return `/static/boards.html?project=${encodeURIComponent(projectId)}&create=1`;
+    },
+
     projectOpenCount(epicId) {
       return this.projectItems.filter((item) =>
         item.status !== "done" && this.itemEpics(item).some((epic) => epic.id === epicId)

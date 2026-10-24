@@ -1181,6 +1181,21 @@
               </label>
             </div>
 
+            <section class="rounded-[1.2rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4"
+              aria-labelledby="focus-project-boards-heading">
+              <p id="focus-project-boards-heading" class="micro-label">Project boards</p>
+              <p class="mt-2 text-sm text-muted">Create a visual board for a project linked to this item. Save project changes first.</p>
+              <div class="mt-3 flex flex-wrap gap-2" x-show="itemEpics(selectedItem).length">
+                <template x-for="epic in itemEpics(selectedItem)" :key="`focus-create-board-${epic.id}`">
+                  <a :href="boardCreateUrl(epic.id)" target="_blank" rel="noopener"
+                    class="btn-secondary" x-text="`Create board for ${epic.name}`"></a>
+                </template>
+              </div>
+              <p x-show="!itemEpics(selectedItem).length" class="mt-3 text-sm text-slate-500">
+                Add and save a project under Epics to create its board.
+              </p>
+            </section>
+
             <label
               class="inline-flex items-center gap-3 rounded-[1.2rem] border border-[rgba(99,91,255,0.1)] bg-white/72 px-4 py-3 text-sm text-ink">
               <input x-model="focusDraft.is_pinned" type="checkbox"
