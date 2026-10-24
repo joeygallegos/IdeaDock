@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdeaDock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: "#16203a",
+            muted: "#64748f",
+            accent: "#635bff",
+            accentStrong: "#4f46e5",
+            accentBlue: "#0ea5e9",
+            surface: "#ffffff",
+          },
+          fontFamily: {
+            display: ["Fraunces", "Georgia", "serif"],
+            sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+            mono: ["IBM Plex Mono", "Consolas", "Monaco", "monospace"],
+          },
+          boxShadow: {
+            shell: "0 24px 80px rgba(80, 102, 144, 0.16)",
+            panel: "0 18px 46px rgba(80, 102, 144, 0.12)",
+            action: "0 16px 30px rgba(99, 91, 255, 0.22)",
+          },
+        },
+      },
+    };
+  </script>
+  <script defer src="/static/app.js?v=20260915-12"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --bg-1: #f8fbff;
+      --bg-2: #eef4ff;
+      --bg-3: #f5f1ff;
+      --ink: #16203a;
+      --muted: #64748f;
+      --panel: rgba(255, 255, 255, 0.84);
+      --panel-border: rgba(99, 91, 255, 0.12);
+      --accent: #635bff;
+      --accent-strong: #4f46e5;
+      --accent-soft: rgba(99, 91, 255, 0.12);
+      --accent-blue: #0ea5e9;
+      --shadow: 0 24px 80px rgba(80, 102, 144, 0.16);
+    }
+
+    [x-cloak] {
+      display: none !important;
+    }
+
+    html {
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(14, 165, 233, 0.15), transparent 25%),
+        radial-gradient(circle at top right, rgba(99, 91, 255, 0.16), transparent 28%),
+        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 62%, var(--bg-3) 100%);
+    }
+
+    .page-shell {
+      position: relative;
+      overflow: visible;
+    }
+
+    .hero-band {
+      position: relative;
+      gap: 1.5rem;
+      padding: 0.5rem 0 0.15rem;
+    }
+
+    .hero-intro {
+      position: relative;
+      padding: 1rem 0 0.5rem;
+    }
+
+    .hero-review {
+      position: relative;
+      padding: 1rem 0 0.5rem;
+    }
+
+    .floating-orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(4px);
+      opacity: 0.75;
+      animation: float 11s ease-in-out infinite;
+    }
+
+    .floating-orb--left {
+      top: -4rem;
+      left: -3rem;
+      width: 16rem;
+      height: 16rem;
+      background: radial-gradient(circle at 30% 30%, rgba(14, 165, 233, 0.28), rgba(14, 165, 233, 0));
+    }
+
+    .floating-orb--right {
+      top: -5rem;
+      right: -2rem;
+      width: 18rem;
+      height: 18rem;
+      background: radial-gradient(circle at 50% 50%, rgba(99, 91, 255, 0.22), rgba(99, 91, 255, 0));
+      animation-delay: -3s;
+    }
+
+    .panel-card {
+      position: relative;
+      border-radius: 1.75rem;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      box-shadow: 0 18px 46px rgba(80, 102, 144, 0.12);
+      backdrop-filter: blur(14px);
+      animation: rise 0.26s ease-out both;
+    }
+
+    .panel-card--gradient {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.78)),
+        linear-gradient(135deg, rgba(99, 91, 255, 0.08), rgba(14, 165, 233, 0.08));
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(99, 91, 255, 0.15);
+      background: rgba(255, 255, 255, 0.78);
+      padding: 0.55rem 0.95rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .field-shell {
+      width: 100%;
+      border-radius: 1.2rem;
+      border: 1px solid rgba(99, 91, 255, 0.14);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+
+    .field-shell:focus {
+      outline: none;
+      border-color: rgba(99, 91, 255, 0.34);
+      box-shadow:
+        0 0 0 4px rgba(99, 91, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      border-radius: 999px;
+      padding: 0.8rem 1.15rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-ghost:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      border: 1px solid transparent;
+      color: white;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      box-shadow: 0 16px 30px rgba(99, 91, 255, 0.22);
+    }
+
+    .btn-secondary {
+      border: 1px solid rgba(99, 91, 255, 0.16);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .btn-ghost {
+      border: 1px solid rgba(99, 91, 255, 0.1);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .micro-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metric-card {
+      border-radius: 1.45rem;
+      border: 1px solid rgba(99, 91, 255, 0.12);
+      background: rgba(255, 255, 255, 0.66);
+      padding: 1rem 1.05rem;
+    }
+
+    .item-row {
+      border-radius: 1.4rem;
+      border: 1px solid rgba(99, 91, 255, 0.08);
+      background: rgba(255, 255, 255, 0.6);
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .item-row:hover {
+      transform: translateY(-1px);
+      border-color: rgba(99, 91, 255, 0.18);
+      background: rgba(255, 255, 255, 0.74);
+    }
+
+    .item-row--active {
+      border-color: rgba(99, 91, 255, 0.3);
+      background: linear-gradient(180deg, rgba(99, 91, 255, 0.08), rgba(255, 255, 255, 0.82));
+      box-shadow: 0 16px 32px rgba(99, 91, 255, 0.08);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 0.38rem 0.72rem;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .status-pill--default {
+      border-color: rgba(148, 163, 184, 0.18);
+      background: rgba(148, 163, 184, 0.12);
+      color: #475569;
+    }
+
+    .status-pill--next {
+      border-color: rgba(14, 165, 233, 0.18);
+      background: rgba(14, 165, 233, 0.12);
+      color: #0369a1;
+    }
+
+    .status-pill--doing {
+      border-color: rgba(99, 91, 255, 0.2);
+      background: rgba(99, 91, 255, 0.12);
+      color: var(--accent-strong);
+    }
+
+    .status-pill--waiting {
+      border-color: rgba(245, 158, 11, 0.22);
+      background: rgba(245, 158, 11, 0.12);
+      color: #b45309;
+    }
+
+    .status-pill--done {
+      border-color: rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.12);
+      color: #047857;
+    }
+
+    .token-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 999px;
+      padding: 0.44rem 0.82rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .token-pill--epic {
+      background: rgba(99, 91, 255, 0.1);
+      color: var(--accent-strong);
+    }
+
+    .token-pill--entity {
+      background: rgba(14, 165, 233, 0.1);
+      color: #0369a1;
+    }
+
+    .token-pill--meta {
+      background: rgba(148, 163, 184, 0.12);
+      color: #475569;
+    }
+
+    .drop-zone {
+      border-radius: 1.4rem;
+      border: 1.5px dashed rgba(99, 91, 255, 0.22);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(240, 246, 255, 0.72)),
+        linear-gradient(135deg, rgba(99, 91, 255, 0.08), rgba(14, 165, 233, 0.06));
+      padding: 1.15rem;
+      transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .drop-zone--active {
+      border-color: rgba(99, 91, 255, 0.48);
+      box-shadow: 0 0 0 6px rgba(99, 91, 255, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .upload-row {
+      border-radius: 1rem;
+      border: 1px solid rgba(99, 91, 255, 0.1);
+      background: rgba(255, 255, 255, 0.72);
+      padding: 0.8rem 0.9rem;
+    }
+
+    .upload-track {
+      height: 0.42rem;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .upload-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 180ms ease;
+    }
+
+    .mood-grid {
+      column-count: 2;
+      column-gap: 1rem;
+    }
+
+    .mood-tile {
+      break-inside: avoid;
+    }
+
+    .focus-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(15, 23, 42, 0.38);
+      backdrop-filter: blur(18px);
+    }
+
+    .focus-card {
+      width: min(1120px, 100%);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      border-radius: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.44);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 255, 0.88));
+      box-shadow: var(--shadow);
+    }
+
+    .board-focus-card {
+      width: min(96vw, 1680px);
+      height: calc(100vh - 2rem);
+      max-height: calc(100vh - 2rem);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border-radius: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.44);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.9));
+      box-shadow: var(--shadow);
+    }
+
+    .board-focus-scroll {
+      flex: 1;
+      overflow: auto;
+      padding: 1.5rem;
+    }
+
+    .mood-grid--immersive {
+      column-count: 4;
+      column-gap: 1.15rem;
+    }
+
+    .empty-state {
+      border-radius: 1.75rem;
+      border: 1px dashed rgba(99, 91, 255, 0.18);
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(10px);
+      }
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .hero-review {
+        border-top: 1px solid rgba(99, 91, 255, 0.12);
+        padding-top: 1.5rem;
+      }
+
+      .mood-grid {
+        column-count: 1;
+      }
+
+      .mood-grid--immersive {
+        column-count: 2;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .board-focus-card {
+        width: calc(100vw - 1rem);
+        height: calc(100vh - 1rem);
+        max-height: calc(100vh - 1rem);
+        border-radius: 1.35rem;
+      }
+
+      .board-focus-scroll {
+        padding: 1rem;
+      }
+
+      .mood-grid--immersive {
+        column-count: 1;
+      }
+    }
+
+    @media (min-width: 1024px) and (max-width: 1399px) {
+      .mood-grid--immersive {
+        column-count: 3;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .hero-review {
+        border-left: 1px solid rgba(99, 91, 255, 0.12);
+        padding-left: 2rem;
+      }
+    }
+
+    /* The home view is deliberately quiet: projects first, then their work. */
+    body {
+      background: #f8fafc;
+    }
+
+    .floating-orb,
+    .legacy-dashboard {
+      display: none;
+    }
+
+    .workspace {
+      max-width: 88rem;
+      margin: 0 auto;
+    }
+
+    .workspace-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 0 1.5rem;
+    }
+
+    .workspace-title {
+      font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+      font-size: clamp(1.5rem, 3vw, 2.15rem);
+      font-weight: 700;
+      letter-spacing: -0.045em;
+    }
+
+    .work-panel {
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      background: #fff;
+    }
+
+    .work-row {
+      width: 100%;
+      border-bottom: 1px solid #edf2f7;
+      padding: 1rem 0;
+      text-align: left;
+    }
+
+    .work-row:last-child { border-bottom: 0; }
+    .work-row:hover .work-row__title { color: #4338ca; }
+    .work-row--selected .work-row__title { color: #4338ca; }
+    .work-row__title { font-size: 0.96rem; font-weight: 700; }
+    .quiet-label { color: #64748b; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  </style>
+</head>
+
+<body class="font-sans text-ink">
+  <main x-data="ideaDockApp()" x-init="init()" x-cloak
+    @keydown.escape.window="if (lightboxAsset) { lightboxAsset = null } else if (moodBoardFocus) { moodBoardFocus = false } else if (focusMode) { closeFocusMode() }"
+    class="mx-auto max-w-[96rem] px-3 py-5 sm:px-4 lg:px-5 lg:py-6 2xl:px-8">
+    <section class="page-shell">
+      <div class="floating-orb floating-orb--left"></div>
+      <div class="floating-orb floating-orb--right"></div>
+
+      <div class="workspace relative z-10">
+        <header class="workspace-header">
+          <div>
+            <p class="quiet-label">IdeaDock</p>
+            <h1 class="workspace-title mt-1">Your active projects</h1>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" @click="resetFilters()" class="btn-secondary">All projects</button>
+          </div>
+        </header>
+
+        <div x-show="flash.message" class="mb-4 rounded-xl border px-4 py-3 text-sm"
+          :class="flash.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
+          <p x-text="flash.message"></p>
+        </div>
+
+        <section aria-labelledby="projects-heading" class="mb-5">
+          <label for="project-filter" id="projects-heading" class="quiet-label">Project</label>
+          <div class="mt-2 flex flex-wrap items-center gap-3">
+            <select id="project-filter" x-model="filters.epic_id" @change="selectProject(filters.epic_id)"
+              class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 sm:max-w-md">
+              <option value="">All active projects</option>
+              <template x-for="epic in epics" :key="epic.id">
+                <option :value="String(epic.id)" x-text="projectOptionLabel(epic)"></option>
+              </template>
+            </select>
+            <p class="text-sm text-slate-500">Choose a project to narrow the list.</p>
+          </div>
+          <template x-if="!epics.length">
+            <p class="mt-2 text-sm text-slate-500">Add a project with a <code>#project</code> in your first note.</p>
+          </template>
+        </section>
+
+        <section x-show="filters.epic_id" x-cloak x-init="loadProjectBoards(filters.epic_id); $watch('filters.epic_id', value => loadProjectBoards(value))"
+          class="work-panel mb-5 p-5" aria-labelledby="project-boards-heading">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="project-boards-heading" class="text-lg font-bold">Project boards</h2>
+            <a :href="'/static/boards.html?project=' + encodeURIComponent(filters.epic_id) + '&create=1'"
+              class="btn-secondary">Create board</a>
+          </div>
+          <p x-show="projectBoardsLoading" class="mt-2 text-sm text-slate-500">Loading boards…</p>
+          <p x-show="projectBoardsError" x-text="projectBoardsError" role="alert" class="mt-2 text-sm text-rose-700"></p>
+          <button x-show="projectBoardsError" @click="loadProjectBoards(filters.epic_id)" class="btn-secondary mt-2">Retry</button>
+          <p x-show="!projectBoardsLoading && !projectBoardsError && !projectBoards.length" class="mt-2 text-sm text-slate-500">
+            No boards created for this project. Create a board, then upload images inside it.
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <template x-for="board in projectBoards" :key="board.id">
+              <a :href="'/static/boards.html?project=' + encodeURIComponent(filters.epic_id) + '&board=' + board.id"
+                class="btn-secondary" x-text="board.name"></a>
+            </template>
+          </div>
+        </section>
+
+        <section class="mt-7 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(22rem,0.75fr)]">
+          <div class="work-panel p-5 sm:p-6">
+            <div class="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <p class="quiet-label" x-text="filters.status_filter === 'done' ? 'Completed work' : (filters.epic_id ? 'Active project work' : 'All active work')"></p>
+                <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-900"><span x-text="items.length"></span> notes and tasks</h2>
+              </div>
+              <input x-model.debounce.250ms="filters.q" @input.debounce.250ms="loadItems()" type="search" placeholder="Search this list" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-52" />
+            </div>
+            <div>
+              <template x-if="!items.length">
+                <div class="py-12 text-center text-sm text-slate-500">Nothing here yet. Capture a note below or choose another project.</div>
+              </template>
+              <template x-for="item in items" :key="item.id">
+                <div class="work-row flex items-start gap-3"
+                  :class="selectedItem && selectedItem.id === item.id ? 'work-row work-row--selected' : 'work-row'">
+                  <button type="button" @click="openFocusModeForItem(item.id)" class="min-w-0 flex-1 text-left">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <p class="work-row__title" x-text="item.title"></p>
+                      <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                        <span x-text="labelize(item.status)"></span>
+                        <span x-show="item.priority">· <span x-text="item.priority === 'high' ? 'High priority' : item.priority"></span></span>
+                        <template x-for="epic in itemEpics(item)" :key="`${item.id}-${epic.id}`"><span>· <span x-text="epic.name"></span></span></template>
+                      </div>
+                    </div>
+                    <span class="shrink-0 text-xs text-slate-400" x-text="relativeDate(item.updated_at)"></span>
+                  </div>
+                  </button>
+                  <button x-show="item.status !== 'done'" type="button" @click="completeItem(item)"
+                    class="shrink-0 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    :aria-label="`Mark ${item.title} done`">Mark done</button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <aside class="work-panel p-5 sm:p-6">
+            <p class="quiet-label">Quick note</p>
+            <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-900">Capture it, then move on.</h2>
+            <form @submit.prevent="submitCapture" class="mt-4">
+              <label class="sr-only" for="quick-capture">New note or task</label>
+              <textarea id="quick-capture" x-model="captureText" @input.debounce.200ms="queuePreview" rows="5" placeholder="Write a note or task. Add #project and !high when useful." class="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm leading-6 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"></textarea>
+              <div class="mt-3 flex items-center justify-between gap-3">
+                <details class="text-xs text-slate-500"><summary class="cursor-pointer">Formatting help</summary><p class="mt-2 max-w-xs">Use <code>#project</code>, <code>!high</code>, and <code>-task</code> only when they help you find it later.</p></details>
+                <button type="submit" class="btn-primary" :disabled="isSaving"><span x-text="isSaving ? 'Saving' : 'Add note'"></span></button>
+              </div>
+            </form>
+            <details class="mt-7 border-t border-slate-100 pt-4">
+              <summary class="cursor-pointer text-sm font-semibold text-slate-700">More filters</summary>
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <select x-model="filters.status_filter" @change="loadItems()" class="rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">All active statuses</option><template x-for="statusName in statuses" :key="statusName"><option :value="statusName" x-text="labelize(statusName)"></option></template></select>
+                <select x-model="filters.priority" @change="loadItems()" class="rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">All priorities</option><template x-for="priorityName in priorities" :key="priorityName"><option :value="priorityName" x-text="priorityName"></option></template></select>
+              </div>
+            </details>
+          </aside>
+        </section>
+      </div>
+
+      <div class="legacy-dashboard relative z-10 space-y-5">
+        <section class="hero-band grid lg:grid-cols-[1.3fr_0.92fr]">
+          <div class="hero-intro">
+            <span class="badge-pill">IdeaDock Control Panel</span>
+            <h1 class="mt-4 max-w-3xl font-display text-4xl leading-tight tracking-[-0.03em] sm:text-5xl">
+              Backlog capture that still feels worth opening.
+            </h1>
+            <p class="mt-4 max-w-2xl text-sm leading-7 text-muted sm:text-base">
+              Capture quickly, review deliberately, and pull one item into focus when you need to make real progress
+              without the rest of the backlog competing for attention.
+            </p>
+          </div>
+
+          <div class="hero-review">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="micro-label">Current Review</p>
+                <h2 class="mt-2 font-display text-3xl tracking-[-0.03em]">Open signals</h2>
+              </div>
+              <div class="status-pill status-pill--doing">Live</div>
+            </div>
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+              <div class="metric-card">
+                <p class="micro-label">Inbox</p>
+                <p class="mt-2 font-display text-4xl tracking-[-0.03em]" x-text="review.inbox_count"></p>
+              </div>
+              <div class="metric-card">
+                <p class="micro-label">Waiting</p>
+                <p class="mt-2 font-display text-4xl tracking-[-0.03em]" x-text="review.waiting_count"></p>
+              </div>
+              <div class="metric-card">
+                <p class="micro-label">Overdue</p>
+                <p class="mt-2 font-display text-4xl tracking-[-0.03em]" x-text="review.overdue_count"></p>
+              </div>
+              <div class="metric-card">
+                <p class="micro-label">Image attachments</p>
+                <p class="mt-2 font-display text-4xl tracking-[-0.03em]" x-text="review.mood_board_item_count"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div x-show="flash.message" class="panel-card px-5 py-4 text-sm"
+          :class="flash.type === 'error' ? 'border-rose-200/70 text-rose-700' : 'border-emerald-200/70 text-emerald-700'">
+          <p x-text="flash.message"></p>
+        </div>
+
+        <section class="grid gap-4 lg:grid-cols-[1.14fr_0.86fr]">
+          <form @submit.prevent="submitCapture" class="panel-card p-6">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p class="micro-label">Quick Capture</p>
+                <h2 class="mt-2 font-display text-3xl tracking-[-0.03em]">One line in, normalized item out.</h2>
+                <p class="mt-3 max-w-2xl text-sm leading-7 text-muted">
+                  Quick capture supports multiple epics, entities, priority, and due dates without forcing a busy form.
+                </p>
+              </div>
+              <button type="submit" class="btn-primary" :disabled="isSaving">
+                <span x-text="isSaving ? 'Saving' : 'Save item'"></span>
+              </button>
+            </div>
+
+            <div class="mt-5 rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/70 p-4">
+              <p class="text-sm leading-7 text-muted">
+                Need help turning a chat thread into a clean backlog line? Copy this helper prompt, drop it into GPT,
+                and paste the result back here.
+              </p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" @click.prevent="$data.copyCapturePrompt()" class="btn-secondary">
+                  Copy GPT prompt
+                </button>
+                <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+                  Format: <span class="normal-case tracking-normal" x-text="captureLineTemplate"></span>
+                </p>
+              </div>
+            </div>
+
+            <label class="mt-5 block">
+              <span class="micro-label">Capture line</span>
+              <input x-model="captureText" @input.debounce.200ms="queuePreview" type="text"
+                placeholder="Create engraved swing set plaque #house #family -task @harper !med"
+                class="field-shell mt-3 px-4 py-4 text-sm text-ink" />
+            </label>
+
+            <template x-if="preview">
+              <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-[1.3rem] border border-[rgba(99,91,255,0.1)] bg-white/78 p-4">
+                  <p class="micro-label">Title</p>
+                  <p class="mt-3 text-sm leading-7 text-ink"
+                    x-text="preview.title || 'No plain title text left after parsing yet.'"></p>
+                </div>
+                <div class="rounded-[1.3rem] border border-[rgba(99,91,255,0.1)] bg-white/78 p-4">
+                  <p class="micro-label">Detected</p>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <template x-for="epicName in preview.epic_names" :key="epicName">
+                      <span class="token-pill token-pill--epic">#<span x-text="epicName"></span></span>
+                    </template>
+                    <span x-show="preview.item_type" class="token-pill token-pill--meta">-<span
+                        x-text="preview.item_type"></span></span>
+                    <span x-show="preview.priority" class="token-pill token-pill--meta">!<span
+                        x-text="preview.priority"></span></span>
+                    <span x-show="preview.due_date" class="token-pill token-pill--meta">due <span
+                        x-text="formatDate(preview.due_date)"></span></span>
+                    <template x-for="entity in preview.entity_names" :key="entity">
+                      <span class="token-pill token-pill--entity">@<span x-text="entity"></span></span>
+                    </template>
+                  </div>
+                </div>
+                <div x-show="preview.warnings.length"
+                  class="rounded-[1.3rem] border border-amber-200/70 bg-amber-50/80 p-4 text-sm text-amber-800 sm:col-span-2">
+                  <template x-for="warning in preview.warnings" :key="warning">
+                    <p x-text="warning"></p>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </form>
+
+          <section class="panel-card p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="micro-label">Filters</p>
+                <h2 class="mt-2 font-display text-3xl tracking-[-0.03em]">Tighten the view</h2>
+              </div>
+              <button type="button" @click="resetFilters()" class="btn-ghost">Reset</button>
+            </div>
+
+            <div class="mt-5 grid gap-3">
+              <input x-model.debounce.250ms="filters.q" @input.debounce.250ms="loadItems()" type="search"
+                placeholder="Search title or details" class="field-shell px-4 py-3 text-sm text-ink" />
+              <div class="grid gap-3 sm:grid-cols-2">
+                <select x-model="filters.status_filter" @change="loadItems()"
+                  class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">All statuses</option>
+                  <template x-for="statusName in statuses" :key="statusName">
+                    <option :value="statusName" x-text="labelize(statusName)"></option>
+                  </template>
+                </select>
+                <select x-model="filters.item_type" @change="loadItems()"
+                  class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">All types</option>
+                  <template x-for="typeName in itemTypes" :key="typeName">
+                    <option :value="typeName" x-text="labelize(typeName)"></option>
+                  </template>
+                </select>
+                <select x-model="filters.priority" @change="loadItems()" class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">All priorities</option>
+                  <template x-for="priorityName in priorities" :key="priorityName">
+                    <option :value="priorityName" x-text="priorityName.toUpperCase()"></option>
+                  </template>
+                </select>
+                <select x-model="filters.epic_id" @change="loadItems()" class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">All epics</option>
+                  <template x-for="epic in epics" :key="epic.id">
+                    <option :value="String(epic.id)" x-text="epic.name"></option>
+                  </template>
+                </select>
+                <select x-model="filters.entity_id" @change="loadItems()"
+                  class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">All entities</option>
+                  <template x-for="entity in entities" :key="entity.id">
+                    <option :value="String(entity.id)" x-text="entity.name"></option>
+                  </template>
+                </select>
+                <select x-model="filters.has_mood_board" @change="loadItems()"
+                  class="field-shell px-4 py-3 text-sm text-ink">
+                  <option value="">Any attachment state</option>
+                  <option value="true">Has images</option>
+                  <option value="false">No images</option>
+                </select>
+                <select x-model="filters.due_state" @change="loadItems()"
+                  class="field-shell px-4 py-3 text-sm text-ink sm:col-span-2">
+                  <option value="">Any due state</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="scheduled">Has due date</option>
+                  <option value="unscheduled">No due date</option>
+                </select>
+              </div>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button type="button" @click="applyReviewPreset('inbox')" class="btn-secondary">Inbox sweep</button>
+                <button type="button" @click="applyReviewPreset('waiting')" class="btn-secondary">Waiting</button>
+                <button type="button" @click="applyReviewPreset('overdue')" class="btn-secondary">Overdue</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+          <section class="panel-card p-5 sm:p-6">
+            <div class="flex items-center justify-between gap-4 border-b border-[rgba(99,91,255,0.1)] pb-4">
+              <div>
+                <p class="micro-label">Items</p>
+                <p class="mt-1 text-sm text-muted"><span x-text="items.length"></span> visible records</p>
+              </div>
+              <button type="button" @click="loadItems(selectedItem ? selectedItem.id : null)"
+                class="btn-ghost">Refresh</button>
+            </div>
+
+            <div class="mt-4 grid gap-3">
+              <template x-if="!items.length">
+                <div class="empty-state p-8 text-center">
+                  <p class="font-display text-3xl tracking-[-0.03em]">Nothing visible yet.</p>
+                  <p class="mt-3 text-sm leading-7 text-muted">Try widening the filters or capture something new.</p>
+                </div>
+              </template>
+
+              <template x-for="item in items" :key="item.id">
+                <article @click="loadItem(item.id)" class="item-row cursor-pointer px-4 py-4"
+                  :class="selectedItem && selectedItem.id === item.id ? 'item-row item-row--active px-4 py-4' : 'item-row px-4 py-4'">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="token-pill token-pill--meta" x-text="item.item_type"></span>
+                        <span :class="statusClass(item.status)" x-text="item.status"></span>
+                        <span x-show="item.priority" class="token-pill token-pill--meta">!<span
+                            x-text="item.priority"></span></span>
+                      </div>
+                      <h3 class="mt-3 font-display text-[1.65rem] leading-tight tracking-[-0.03em]" x-text="item.title">
+                      </h3>
+                      <div class="mt-3 flex flex-wrap gap-2">
+                        <template x-for="link in item.entity_links" :key="link.id">
+                          <span class="token-pill token-pill--entity">@<span x-text="link.entity.name"></span></span>
+                        </template>
+                        <template x-for="epic in itemEpics(item)" :key="`${item.id}-epic-${epic.id}`">
+                          <span class="token-pill token-pill--epic">#<span x-text="epic.name"></span></span>
+                        </template>
+                        <span x-show="item.due_date" class="token-pill token-pill--meta">due <span
+                            x-text="formatDate(item.due_date)"></span></span>
+                        <span x-show="item.is_blocked" class="token-pill token-pill--meta">blocked</span>
+                        <span x-show="item.has_mood_board" class="token-pill token-pill--meta">images</span>
+                      </div>
+                    </div>
+                    <div class="shrink-0 text-right text-xs uppercase tracking-[0.18em] text-muted">
+                      <div class="flex items-center justify-end gap-2">
+                        <p>#<span x-text="item.id"></span></p>
+                        <button type="button"
+                          class="inline-grid h-5 w-5 place-items-center rounded-sm text-slate-500 opacity-70 transition hover:scale-105 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          @click.stop.prevent="openFocusModeForItem(item.id)" title="Open focus mode"
+                          aria-label="Open focus mode">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.9" stroke-linecap="square" stroke-linejoin="miter" class="h-4 w-4"
+                            aria-hidden="true">
+                            <path d="M4 9V4H9" />
+                            <path d="M15 4H20V9" />
+                            <path d="M20 15V20H15" />
+                            <path d="M9 20H4V15" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p class="mt-2" x-text="relativeDate(item.updated_at)"></p>
+                    </div>
+                  </div>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <section class="panel-card p-5 sm:p-6">
+            <template x-if="selectedItem">
+              <div class="space-y-5">
+                <div class="border-b border-[rgba(99,91,255,0.1)] pb-5">
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p class="micro-label">Item Detail</p>
+                      <h2 class="mt-2 font-display text-4xl leading-tight tracking-[-0.03em]"
+                        x-text="selectedItem.title"></h2>
+                      <p class="mt-3 max-w-2xl text-sm leading-7 text-muted">
+                        Use focus mode when you want to edit this item in isolation and keep the rest of the backlog out
+                        of the way.
+                      </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button type="button" @click="togglePinned()" class="btn-secondary">
+                        <span x-text="selectedItem.is_pinned ? 'Pinned' : 'Pin item'"></span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="token-pill token-pill--meta" x-text="selectedItem.item_type"></span>
+                    <span :class="statusClass(selectedItem.status)" x-text="selectedItem.status"></span>
+                    <span x-show="selectedItem.priority" class="token-pill token-pill--meta">!<span
+                        x-text="selectedItem.priority"></span></span>
+                    <template x-for="link in selectedItem.entity_links" :key="link.id">
+                      <span class="token-pill token-pill--entity">@<span x-text="link.entity.name"></span></span>
+                    </template>
+                    <template x-for="epic in itemEpics(selectedItem)" :key="`detail-epic-${epic.id}`">
+                      <span class="token-pill token-pill--epic">#<span x-text="epic.name"></span></span>
+                    </template>
+                    <span x-show="selectedItem.due_date" class="token-pill token-pill--meta">due <span
+                        x-text="formatDate(selectedItem.due_date)"></span></span>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="micro-label">Quick status</p>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <template x-for="statusName in statuses" :key="statusName">
+                      <button type="button" @click="setStatus(statusName)" class="btn-ghost px-4 py-2 text-[11px]"
+                        :class="selectedItem.status === statusName ? statusClass(statusName) : 'btn-ghost px-4 py-2 text-[11px]'"
+                        x-text="labelize(statusName)"></button>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                  <div class="rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+                    <p class="micro-label">Details</p>
+                    <p class="mt-3 whitespace-pre-wrap text-sm leading-7 text-ink/85"
+                      x-text="selectedItem.details || 'No details yet.'"></p>
+                  </div>
+                  <div class="rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+                    <p class="micro-label">Capture Source</p>
+                    <p class="mt-3 whitespace-pre-wrap font-mono text-xs leading-6 text-muted"
+                      x-text="selectedItem.raw_input || 'Created without raw quick-entry text.'"></p>
+                  </div>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                  <div class="rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+                    <p class="micro-label">Linked entities</p>
+                    <div class="mt-3 space-y-2">
+                      <template x-if="!selectedItem.entity_links.length">
+                        <p class="text-sm leading-7 text-muted">No linked entities yet.</p>
+                      </template>
+                      <template x-for="link in selectedItem.entity_links" :key="link.id">
+                        <div class="rounded-[1rem] border border-[rgba(99,91,255,0.08)] bg-white/75 px-3 py-3 text-sm">
+                          <div class="flex items-center justify-between gap-4">
+                            <p class="font-semibold text-ink" x-text="link.entity.name"></p>
+                            <span class="micro-label" x-text="link.role"></span>
+                          </div>
+                          <p x-show="link.is_blocking" class="mt-2 text-xs uppercase tracking-[0.18em] text-amber-700">
+                            blocking dependency
+                          </p>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+                    <p class="micro-label">Tags</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <template x-if="!selectedItem.tags.length">
+                        <p class="text-sm leading-7 text-muted">No tags yet.</p>
+                      </template>
+                      <template x-for="tag in selectedItem.tags" :key="tag.id">
+                        <span class="token-pill token-pill--meta" x-text="tag.name"></span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <section class="rounded-[1.5rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+                  <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p class="micro-label">Image attachments</p>
+                      <h3 class="mt-2 font-display text-2xl tracking-[-0.03em]">Drop or paste images</h3>
+                      <p class="mt-2 text-sm leading-7 text-muted">
+                        Drag photos straight into the drop zone or paste an image from your clipboard while this item is
+                        selected.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="drop-zone mt-4"
+                    :class="isDragTarget(selectedItem.id) ? 'drop-zone drop-zone--active' : 'drop-zone'"
+                    @dragenter.prevent="setDragTarget(selectedItem.id)"
+                    @dragover.prevent="setDragTarget(selectedItem.id)"
+                    @dragleave.prevent="clearDragTarget(selectedItem.id)"
+                    @drop.prevent="handleDrop($event, selectedItem.id)">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p class="font-display text-2xl tracking-[-0.03em]">Drop photos here</p>
+                        <p class="mt-1 text-sm text-muted">PNG, JPG, GIF, and WEBP uploads are supported.</p>
+                      </div>
+                      <label class="btn-secondary cursor-pointer">
+                        <input type="file" multiple accept="image/*" class="hidden"
+                          @change="uploadFilesFromInput($event, selectedItem.id)" />
+                        Choose files
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 space-y-2" x-show="uploadsForItem(selectedItem.id).length">
+                    <template x-for="upload in uploadsForItem(selectedItem.id)" :key="upload.id">
+                      <div class="upload-row">
+                        <div class="flex items-center justify-between gap-4 text-sm">
+                          <p class="truncate font-semibold text-ink" x-text="upload.name"></p>
+                          <p class="micro-label" x-text="uploadStatusLabel(upload)"></p>
+                        </div>
+                        <div class="upload-track mt-3">
+                          <div class="upload-fill" :style="uploadProgressStyle(upload)"></div>
+                        </div>
+                        <p x-show="upload.error" class="mt-2 text-xs text-rose-700" x-text="upload.error"></p>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="mood-grid mt-5">
+                    <template x-if="!selectedItem.mood_board_assets.length">
+                      <div class="mood-tile empty-state p-6 text-sm text-muted">
+                        No images yet for this item.
+                      </div>
+                    </template>
+                    <template x-for="asset in selectedItem.mood_board_assets" :key="asset.id">
+                      <article
+                        class="mood-tile mb-4 overflow-hidden rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/78">
+                        <button type="button" @click="lightboxAsset = asset" class="block w-full">
+                          <img :src="asset.file_url" :alt="asset.caption || asset.original_filename"
+                            class="h-auto w-full object-cover" loading="lazy" />
+                        </button>
+                        <div class="space-y-3 p-4">
+                          <p class="text-sm leading-7 text-ink/85" x-text="asset.caption || asset.original_filename">
+                          </p>
+                          <button type="button" @click="deleteAsset(asset.id)" class="btn-ghost px-3 py-2 text-[11px]">
+                            Remove
+                          </button>
+                        </div>
+                      </article>
+                    </template>
+                  </div>
+                </section>
+              </div>
+            </template>
+
+            <template x-if="!selectedItem">
+              <div class="empty-state flex min-h-[30rem] items-center justify-center p-10 text-center">
+                <div>
+                  <p class="font-display text-4xl tracking-[-0.03em]">Nothing selected yet.</p>
+                  <p class="mt-3 text-sm leading-7 text-muted">Pick an item from the list to inspect it, upload images,
+                    or open focus mode.</p>
+                </div>
+              </div>
+            </template>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <div x-show="focusMode && focusDraft" x-cloak class="focus-overlay" @click.self="closeFocusMode()">
+      <div class="focus-card p-5 sm:p-6 lg:p-8">
+        <div class="flex flex-wrap items-start justify-between gap-4 border-b border-[rgba(99,91,255,0.1)] pb-5">
+          <div>
+            <p class="micro-label">Focused Editor</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn-secondary" @click="closeFocusMode()" aria-label="Close editor">Close editor</button>
+            <button x-show="focusDraft.status !== 'done'" type="button" class="btn-secondary" @click="completeFocusItem()"
+              :disabled="isFocusSaving">Mark done</button>
+            <button type="button" class="btn-primary" @click="saveFocusItem()">
+              <span x-text="isFocusSaving ? 'Saving' : 'Save changes'"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-6 grid gap-5 xl:grid-cols-[1fr_0.95fr]">
+          <section class="space-y-4">
+            <div x-show="focusSaveError"
+              class="rounded-[1.2rem] border border-rose-200/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700">
+              <p x-text="focusSaveError"></p>
+            </div>
+
+            <label class="block">
+              <span class="micro-label">Title</span>
+              <input x-model="focusDraft.title" type="text" class="field-shell mt-3 px-4 py-4 text-sm text-ink" />
+            </label>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="token-pill token-pill--meta" x-text="selectedItem ? selectedItem.item_type : ''"></span>
+              <span :class="statusClass(selectedItem ? selectedItem.status : 'inbox')"
+                x-text="selectedItem ? selectedItem.status : ''"></span>
+              <template x-for="link in selectedItem ? selectedItem.entity_links : []" :key="link.id">
+                <span class="token-pill token-pill--entity">@<span x-text="link.entity.name"></span></span>
+              </template>
+              <template x-for="epic in itemEpics(selectedItem)" :key="`focus-epic-${epic.id}`">
+                <span class="token-pill token-pill--epic">#<span x-text="epic.name"></span></span>
+              </template>
+            </div>
+
+            <label class="block">
+              <span class="micro-label">Details</span>
+              <textarea x-model="focusDraft.details" rows="8"
+                class="field-shell mt-3 px-4 py-4 text-sm leading-7 text-ink"
+                placeholder="Add context, next steps, notes, or decisions."></textarea>
+            </label>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="micro-label">Status</span>
+                <select x-model="focusDraft.status" class="field-shell mt-3 px-4 py-3 text-sm text-ink">
+                  <template x-for="statusName in statuses" :key="statusName">
+                    <option :value="statusName" x-text="labelize(statusName)"></option>
+                  </template>
+                </select>
+                <span class="mt-2 block text-xs text-slate-500">Choose Done when this item is closed.</span>
+              </label>
+              <label class="block">
+                <span class="micro-label">Type</span>
+                <select x-model="focusDraft.item_type" class="field-shell mt-3 px-4 py-3 text-sm text-ink">
+                  <template x-for="typeName in itemTypes" :key="typeName">
+                    <option :value="typeName" x-text="labelize(typeName)"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="block">
+                <span class="micro-label">Priority</span>
+                <select x-model="focusDraft.priority" class="field-shell mt-3 px-4 py-3 text-sm text-ink">
+                  <option value="">None</option>
+                  <template x-for="priorityName in priorities" :key="priorityName">
+                    <option :value="priorityName" x-text="priorityName.toUpperCase()"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="block">
+                <span class="micro-label">Due date</span>
+                <input x-model="focusDraft.due_date" type="date" class="field-shell mt-3 px-4 py-3 text-sm text-ink" />
+              </label>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="block">
+                <span class="micro-label">Epics</span>
+                <input x-model="focusDraft.epic_input" type="text" placeholder="house, family or #house #family"
+                  class="field-shell mt-3 px-4 py-3 text-sm text-ink" />
+              </label>
+              <label class="block">
+                <span class="micro-label">Tags</span>
+                <input x-model="focusDraft.tag_input" type="text" placeholder="engraving, gifts, outdoor"
+                  class="field-shell mt-3 px-4 py-3 text-sm text-ink" />
+              </label>
+            </div>
+
+            <label
+              class="inline-flex items-center gap-3 rounded-[1.2rem] border border-[rgba(99,91,255,0.1)] bg-white/72 px-4 py-3 text-sm text-ink">
+              <input x-model="focusDraft.is_pinned" type="checkbox"
+                class="h-4 w-4 rounded border-[rgba(99,91,255,0.25)] text-accent focus:ring-accent/30" />
+              Keep this item pinned
+            </label>
+          </section>
+
+          <section class="space-y-4">
+            <div class="drop-zone" :class="isDragTarget(focusDraft.id) ? 'drop-zone drop-zone--active' : 'drop-zone'"
+              @dragenter.prevent="setDragTarget(focusDraft.id)" @dragover.prevent="setDragTarget(focusDraft.id)"
+              @dragleave.prevent="clearDragTarget(focusDraft.id)" @drop.prevent="handleDrop($event, focusDraft.id)">
+              <p class="font-display text-2xl tracking-[-0.03em]">Drop or paste images here</p>
+              <p class="mt-2 text-sm leading-7 text-muted">
+                This editor also accepts pasted images, so you can clip inspiration without saving files first.
+              </p>
+              <label class="btn-secondary mt-4 cursor-pointer">
+                <input type="file" multiple accept="image/*" class="hidden"
+                  @change="uploadFilesFromInput($event, focusDraft.id)" />
+                Choose files
+              </label>
+            </div>
+
+            <div class="space-y-2" x-show="uploadsForItem(focusDraft.id).length">
+              <template x-for="upload in uploadsForItem(focusDraft.id)" :key="upload.id">
+                <div class="upload-row">
+                  <div class="flex items-center justify-between gap-4 text-sm">
+                    <p class="truncate font-semibold text-ink" x-text="upload.name"></p>
+                    <p class="micro-label" x-text="uploadStatusLabel(upload)"></p>
+                  </div>
+                  <div class="upload-track mt-3">
+                    <div class="upload-fill" :style="uploadProgressStyle(upload)"></div>
+                  </div>
+                  <p x-show="upload.error" class="mt-2 text-xs text-rose-700" x-text="upload.error"></p>
+                </div>
+              </template>
+            </div>
+
+            <div class="rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4">
+              <div class="flex items-center justify-between gap-4">
+                <div>
+                  <p class="micro-label">Image attachments</p>
+                  <p class="mt-2 text-sm text-muted">Current images stay visible while you edit the rest of the item.
+                  </p>
+                </div>
+                <button type="button" x-show="(selectedItem ? selectedItem.mood_board_assets : []).length"
+                  class="inline-grid h-5 w-5 shrink-0 place-items-center rounded-sm text-slate-500 opacity-70 transition hover:scale-105 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  @click="moodBoardFocus = true" title="Open image attachments" aria-label="Open image attachments">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.9" stroke-linecap="square" stroke-linejoin="miter" class="h-4 w-4"
+                    aria-hidden="true">
+                    <path d="M4 9V4H9" />
+                    <path d="M15 4H20V9" />
+                    <path d="M20 15V20H15" />
+                    <path d="M9 20H4V15" />
+                  </svg>
+                </button>
+              </div>
+              <div class="mood-grid mt-4">
+                <template x-if="!(selectedItem ? selectedItem.mood_board_assets : []).length">
+                  <div class="mood-tile empty-state p-6 text-sm text-muted">No images attached yet.</div>
+                </template>
+                <template x-for="asset in selectedItem ? selectedItem.mood_board_assets : []" :key="asset.id">
+                  <article
+                    class="mood-tile mb-4 overflow-hidden rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/78">
+                    <button type="button" @click="lightboxAsset = asset" class="block w-full">
+                      <img :src="asset.file_url" :alt="asset.caption || asset.original_filename"
+                        class="h-auto w-full object-cover" loading="lazy" />
+                    </button>
+                    <div class="p-4">
+                      <p x-show="asset.caption" class="text-sm leading-7 text-ink/85" x-text="asset.caption"></p>
+                      <button type="button" @click="deleteAsset(asset.id)" class="btn-ghost mt-3 px-3 py-2 text-[11px]">
+                        Remove
+                      </button>
+                    </div>
+                  </article>
+                </template>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div x-show="moodBoardFocus" x-cloak class="focus-overlay" style="z-index: 68;"
+      @click.self="moodBoardFocus = false">
+      <div class="board-focus-card">
+        <div class="flex items-start justify-between gap-4 border-b border-[rgba(99,91,255,0.1)] px-6 py-5 sm:px-7">
+          <div>
+            <p class="micro-label">Image attachments</p>
+            <h2 class="mt-2 font-display text-4xl tracking-[-0.03em]" x-text="selectedItem ? selectedItem.title : ''">
+              Just the images, nothing else.</h2>
+          </div>
+          <button type="button" class="btn-secondary shrink-0" @click="moodBoardFocus = false">Back to item</button>
+        </div>
+
+        <div class="board-focus-scroll">
+          <div class="mood-grid mood-grid--immersive">
+            <template x-if="!(selectedItem ? selectedItem.mood_board_assets : []).length">
+              <div class="mood-tile empty-state p-6 text-sm text-muted">No images attached yet.</div>
+            </template>
+            <template x-for="asset in selectedItem ? selectedItem.mood_board_assets : []"
+              :key="`focus-board-${asset.id}`">
+              <article
+                class="mood-tile mb-5 overflow-hidden rounded-[1.4rem] border border-[rgba(99,91,255,0.1)] bg-white/82">
+                <button type="button" @click="lightboxAsset = asset" class="block w-full">
+                  <img :src="asset.file_url" :alt="asset.caption || asset.original_filename"
+                    class="h-auto w-full object-cover" loading="lazy" />
+                </button>
+                <p x-show="asset.caption" class="px-4 py-4 text-sm leading-7 text-ink/85" x-text="asset.caption"></p>
+              </article>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div x-show="lightboxAsset" x-cloak class="focus-overlay" style="z-index: 70;" @click.self="lightboxAsset = null">
+      <div class="focus-card max-w-5xl overflow-hidden p-0">
+        <img x-show="lightboxAsset" :src="lightboxAsset ? lightboxAsset.file_url : ''"
+          :alt="lightboxAsset ? (lightboxAsset.caption || lightboxAsset.original_filename) : ''"
+          class="max-h-[80vh] w-full object-contain bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)]" />
+        <div class="flex items-center justify-between gap-4 p-4">
+          <p class="text-sm leading-7 text-ink/80"
+            x-text="lightboxAsset ? (lightboxAsset.caption || lightboxAsset.original_filename) : ''"></p>
+          <button type="button" @click="lightboxAsset = null" class="btn-primary">Close</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+
+</html>

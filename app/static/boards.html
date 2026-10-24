@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Visual boards · IdeaDock</title>
+    <link rel="stylesheet" href="/static/boards.css">
+    <script defer src="/static/board-core.js"></script>
+    <script defer src="/static/boards.js"></script>
+  </head>
+  <body>
+    <header>
+      <a id="project-back" href="/">‹ Project</a>
+      <label>
+        Project
+        <select id="projects" aria-label="Project"><option value="">Choose a project</option></select>
+      </label>
+      <h1>Visual boards</h1>
+      <span id="view-only" hidden>View only</span>
+      <span id="status" role="status" aria-live="polite"></span>
+      <button id="retry" class="edit" hidden>Retry save</button>
+      <button id="recovery" hidden>Review options</button>
+    </header>
+    <p id="message" role="status" hidden></p>
+    <main id="list">
+      <div class="list-heading">
+        <p>Create a named board for your project, then upload images inside it.</p>
+        <button id="new-board" class="primary edit" disabled>Create board</button>
+      </div>
+      <div id="boards" class="cards"></div>
+    </main>
+    <main id="workspace" hidden>
+      <nav class="workspace-bar" aria-label="Board controls">
+        <button id="back">All boards</button>
+        <select id="switcher" aria-label="Switch board"></select>
+        <button id="workspace-new" class="edit">New board</button>
+        <button id="undo" class="edit" data-tip="Undo (Ctrl+Z)">Undo</button>
+        <button id="redo" class="edit" data-tip="Redo (Ctrl+Shift+Z)">Redo</button>
+        <button id="deck-toggle" aria-expanded="true">Images</button>
+        <button id="objects-toggle">Objects / details</button>
+      </nav>
+      <div class="work-area">
+        <aside id="deck">
+          <h2>Project images</h2>
+          <label class="search">
+            Search images
+            <input id="search" type="search">
+          </label>
+          <button id="upload" class="edit">Upload images</button>
+          <input id="files" type="file" accept="image/*" multiple hidden>
+          <div id="uploads" aria-live="polite"></div>
+          <div id="asset-grid"></div>
+          <div id="asset-preview"></div>
+        </aside>
+        <section id="canvas-shell" aria-label="Board workspace">
+          <div class="canvas-tools">
+            <button id="select" class="edit" aria-pressed="true" data-tip="Select objects or drag a marquee">Select</button>
+            <button id="hand" aria-pressed="false" data-tip="Pan the canvas (Space temporarily)">Hand</button>
+            <details class="edit">
+              <summary>Add object</summary>
+              <div class="popover">
+                <button id="text">Text label</button>
+                <button id="swatch">Color swatch</button>
+              </div>
+            </details>
+            <button id="sample" class="edit">Sample from image</button>
+          </div>
+          <div id="selection-tools" hidden>
+            <span id="selection-count"></span>
+            <button id="duplicate" class="edit">Duplicate</button>
+            <button id="back-layer" class="edit">Send to back</button>
+            <button id="front-layer" class="edit">Bring to front</button>
+            <button id="remove" class="edit">Remove from board</button>
+            <button id="edit-object" class="edit">Edit object</button>
+          </div>
+          <p id="hint" hidden>
+            Shift-click toggles objects; Shift-drag adds a marquee selection.
+            <button id="dismiss-hint">Dismiss</button>
+          </p>
+          <p id="sampling" hidden>Choose a color from an image · Esc to cancel</p>
+          <div id="canvas" tabindex="0" aria-label="Canvas. Arrow keys move selected objects; Space-drag pans.">
+            <div id="world"></div>
+            <div id="marquee" hidden></div>
+            <div id="empty">
+              <h2>Start this visual direction</h2>
+              <p>Drag an image here, or select one and choose Add to board.</p>
+              <div class="edit">
+                <button id="empty-upload">Upload images</button>
+                <button id="empty-text">Add text label</button>
+                <button id="empty-swatch">Add color swatch</button>
+              </div>
+            </div>
+          </div>
+          <div class="navigation">
+            <button id="zoom-out" data-tip="Zoom out" aria-label="Zoom out">−</button>
+            <output id="zoom">100%</output>
+            <button id="zoom-in" data-tip="Zoom in" aria-label="Zoom in">+</button>
+            <button id="fit">Fit board</button>
+          </div>
+        </section>
+        <aside id="details" hidden>
+          <h2>Objects and details</h2>
+          <div id="object-list"></div>
+          <button id="details-close">Close details</button>
+        </aside>
+      </div>
+    </main>
+    <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+      <h2 id="confirm-title">Confirm your choice</h2>
+      <p id="confirm-message"></p>
+      <button id="confirm-cancel" type="button" autofocus>Cancel</button>
+      <button id="confirm-proceed" type="button">Continue</button>
+    </dialog>
+    <dialog id="name-dialog">
+      <form id="name-form">
+        <h2 id="name-title">Board name</h2>
+        <label>
+          Board name
+          <input id="name-value" required maxlength="120" autocomplete="off">
+        </label>
+        <button id="name-cancel" type="button">Cancel</button>
+        <button class="primary" type="submit">Continue</button>
+      </form>
+    </dialog>
+    <dialog id="editor">
+      <form method="dialog">
+        <h2 id="editor-title">Edit object</h2>
+        <label id="text-field">
+          Text label
+          <textarea id="text-value" maxlength="2000"></textarea>
+        </label>
+        <div id="color-field">
+          <label>
+            Color
+            <input id="color-value" type="color">
+          </label>
+          <label>
+            Hex
+            <input id="hex-value" maxlength="7" placeholder="#635BFF">
+          </label>
+          <p id="color-error" role="alert"></p>
+        </div>
+        <button value="cancel">Cancel</button>
+        <button id="editor-save" type="button" class="primary">Done</button>
+      </form>
+    </dialog>
+    <dialog id="conflict">
+      <h2>This board changed in another tab</h2>
+      <p>Your local edits are still here. Choose how to recover them.</p>
+      <p id="recovery-error" role="alert"></p>
+      <button id="keep-copy" class="primary edit" autofocus>Keep my changes as a copy</button>
+      <button id="open-latest">Open latest</button>
+      <button id="compare">Compare versions</button>
+      <div id="comparison" hidden></div>
+      <button id="replace" class="edit" hidden>Replace latest</button>
+      <button id="dismiss-conflict">Keep working locally</button>
+    </dialog>
+  </body>
+</html>

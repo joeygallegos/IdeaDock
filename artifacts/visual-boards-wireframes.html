@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IdeaDock Visual Boards — UX Wireframes</title>
+  <style>
+    :root {
+      --ink: #17213b;
+      --muted: #66728b;
+      --line: #cfd5e2;
+      --line-strong: #aeb8ca;
+      --paper: #ffffff;
+      --canvas: #f5f4f0;
+      --soft: #f2f5fb;
+      --accent: #635bff;
+      --accent-soft: #eeedff;
+      --danger: #b42318;
+      --warning: #fff4e5;
+      --shadow: 0 24px 70px rgba(59, 72, 112, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 2400px;
+      height: 1900px;
+      overflow: hidden;
+      background: #eef2fa;
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 7% 4%, rgba(14, 165, 233, 0.13), transparent 26%),
+        radial-gradient(circle at 91% 2%, rgba(99, 91, 255, 0.15), transparent 29%),
+        linear-gradient(180deg, #fbfdff 0%, #eef3fb 100%);
+    }
+
+    button, input { font: inherit; }
+
+    .sheet {
+      width: 2400px;
+      height: 1900px;
+      padding: 58px 68px 68px;
+      display: grid;
+      grid-template-rows: 116px 554px 1fr;
+      gap: 30px;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 48px;
+    }
+
+    .eyebrow, .screen-tag, .micro {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 800;
+      color: #596681;
+    }
+
+    .sheet h1 {
+      margin: 12px 0 0;
+      font-family: Georgia, serif;
+      font-size: 48px;
+      line-height: 1;
+      letter-spacing: -0.035em;
+    }
+
+    .sheet-summary {
+      width: 770px;
+      margin-top: 9px;
+      font-size: 22px;
+      line-height: 1.45;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.72fr) 420px 430px;
+      gap: 28px;
+      min-height: 0;
+    }
+
+    .frame {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid rgba(83, 96, 137, 0.2);
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: var(--shadow);
+    }
+
+    .screen-tag {
+      position: absolute;
+      z-index: 10;
+      top: 18px;
+      right: 22px;
+      padding: 10px 14px;
+      border: 1px solid #dfe3ec;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.93);
+      font-size: 14px;
+      color: #68738a;
+    }
+
+    .app-topbar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 26px;
+      border-bottom: 1px solid #dde2ec;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .brand {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.11em;
+    }
+
+    .crumb { color: #7b8498; font-weight: 600; }
+
+    .dot-sep { color: #a6afc0; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid #ced5e2;
+      border-radius: 13px;
+      background: white;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 8px 18px rgba(99, 91, 255, 0.24);
+    }
+
+    .btn.icon { min-width: 42px; padding: 0 12px; }
+    .btn.ghost { border-color: transparent; background: transparent; }
+
+    .boards-content { padding: 28px 34px 30px; }
+
+    .project-title {
+      margin: 0;
+      font-family: Georgia, serif;
+      font-size: 35px;
+      letter-spacing: -0.025em;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 30px;
+      margin-top: 18px;
+      border-bottom: 1px solid #dfe4ed;
+    }
+
+    .tab {
+      padding: 0 0 14px;
+      color: #768096;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom: 3px solid var(--accent);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: 25px;
+    }
+
+    .section-head h3 {
+      margin: 0;
+      font-size: 25px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .board-card {
+      overflow: hidden;
+      border: 1px solid #d9deea;
+      border-radius: 20px;
+      background: white;
+    }
+
+    .preview {
+      height: 132px;
+      position: relative;
+      overflow: hidden;
+      background: #f2f1ed;
+      border-bottom: 1px solid #e1e4eb;
+    }
+
+    .preview span {
+      position: absolute;
+      display: block;
+      border: 2px solid rgba(25, 35, 59, 0.3);
+      background: #d6d9df;
+    }
+
+    .preview .p1 { left: 18px; top: 18px; width: 108px; height: 75px; transform: rotate(-3deg); }
+    .preview .p2 { left: 112px; top: 34px; width: 90px; height: 71px; background: #bfc5d1; transform: rotate(3deg); }
+    .preview .p3 { right: 18px; bottom: 16px; width: 60px; height: 60px; background: #858da1; }
+    .preview.alt .p1 { width: 74px; background: #aeb6c6; }
+    .preview.alt .p2 { left: 75px; width: 118px; background: #e0e2e7; }
+    .preview.alt .p3 { background: #c3b6a9; }
+
+    .board-meta {
+      padding: 14px 16px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .board-meta strong { display: block; font-size: 17px; }
+    .board-meta small { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; }
+    .more { color: #7a8498; font-size: 21px; font-weight: 800; line-height: 1; }
+
+    .mobile-frame {
+      width: 100%;
+      background: #f7f7f4;
+    }
+
+    .mobile-frame .screen-tag {
+      top: 82px;
+      right: 18px;
+    }
+
+    .mobile-bar {
+      height: 65px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #d9dee7;
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .mobile-title { min-width: 0; font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mobile-canvas { position: relative; height: 405px; overflow: hidden; background: var(--canvas); }
+
+    .mini-board {
+      position: absolute;
+      inset: 48px 24px 55px;
+      border: 1px dashed #c6cbd5;
+    }
+
+    .mini-object {
+      position: absolute;
+      border: 2px solid #858ea1;
+      background: #d8dbe1;
+    }
+
+    .mini-object.one { left: 30px; top: 34px; width: 150px; height: 94px; transform: rotate(-3deg); }
+    .mini-object.two { right: 32px; top: 120px; width: 125px; height: 82px; background: #bdc4d0; transform: rotate(2deg); }
+    .mini-object.three { left: 72px; bottom: 28px; width: 142px; height: 42px; background: white; }
+    .pinch-note { position: absolute; left: 0; right: 0; bottom: 17px; text-align: center; color: #7b8496; font-size: 14px; }
+
+    .mobile-tabs {
+      height: 82px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #d7dce5;
+      background: white;
+    }
+
+    .mobile-tabs div {
+      display: grid;
+      place-items: center;
+      color: #68738a;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .mobile-tabs .selected { color: var(--accent); background: var(--accent-soft); }
+
+    .states-card { padding: 66px 25px 24px; background: rgba(255, 255, 255, 0.83); }
+    .states-card h3 { margin: 0; font-size: 24px; }
+    .states-card > p { margin: 7px 0 24px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+
+    .state {
+      padding: 16px;
+      border: 1px solid #d9deea;
+      border-radius: 15px;
+      background: white;
+      margin-top: 13px;
+    }
+
+    .state strong { display: block; font-size: 16px; }
+    .state span { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .state.issue { border-color: #edc48e; background: var(--warning); }
+    .state.issue strong { color: #8b4a00; }
+
+    .workspace-frame { background: rgba(255, 255, 255, 0.9); }
+
+    .workspace-top {
+      height: 84px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 24px;
+      padding: 0 28px;
+      border-bottom: 1px solid #d8deea;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .workspace-top .left, .workspace-top .right { display: flex; align-items: center; gap: 12px; }
+    .workspace-top .right { justify-content: flex-end; }
+
+    .board-switcher {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 15px;
+      border: 1px solid #d1d7e2;
+      border-radius: 13px;
+      background: white;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .save-status { color: #5d6980; font-size: 16px; font-weight: 700; }
+    .save-status::before { content: "✓"; margin-right: 7px; color: #2e7d5b; }
+
+    .workspace-body {
+      height: calc(100% - 84px);
+      display: grid;
+      grid-template-columns: 470px minmax(0, 1fr);
+    }
+
+    .asset-deck {
+      position: relative;
+      padding: 30px 26px;
+      border-right: 1px solid #d8deea;
+      background: linear-gradient(180deg, rgba(249, 251, 255, 0.96), rgba(243, 246, 252, 0.96));
+    }
+
+    .deck-head { display: flex; align-items: center; justify-content: space-between; }
+    .deck-head h3 { margin: 0; font-size: 22px; }
+    .count { padding: 5px 10px; border-radius: 999px; background: #e8ebf3; color: #606b80; font-size: 14px; font-weight: 800; }
+
+    .search {
+      height: 46px;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 14px;
+      border: 1px solid #cfd5e2;
+      border-radius: 13px;
+      background: white;
+      color: #8a93a5;
+      font-size: 16px;
+    }
+
+    .deck-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 13px; }
+
+    .assets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .asset {
+      overflow: hidden;
+      border: 1px solid #d8dde7;
+      border-radius: 15px;
+      background: white;
+    }
+
+    .asset-image {
+      height: 124px;
+      position: relative;
+      background: #d6d9df;
+    }
+
+    .asset:nth-child(2) .asset-image { background: #b8bec9; }
+    .asset:nth-child(3) .asset-image { background: #c9c0b8; }
+    .asset:nth-child(4) .asset-image { background: #9ca6b7; }
+    .asset-image::after { content: "IMAGE"; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(23, 33, 59, 0.48); font-size: 13px; font-weight: 900; letter-spacing: 0.13em; }
+
+    .asset-label { padding: 11px 12px 12px; }
+    .asset-label strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .asset-label span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .collapse {
+      position: absolute;
+      left: 26px;
+      right: 26px;
+      bottom: 23px;
+      padding-top: 17px;
+      border-top: 1px solid #dce1ea;
+      color: #657087;
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    .canvas {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(120, 125, 135, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 125, 135, 0.045) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 36px 36px;
+    }
+
+    .canvas-label {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      color: #8b8d91;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .object {
+      position: absolute;
+      border: 2px solid #657084;
+      background: #c7cbd3;
+      box-shadow: 0 12px 28px rgba(44, 48, 57, 0.1);
+    }
+
+    .object.image-a { left: 130px; top: 175px; width: 505px; height: 315px; transform: rotate(-2deg); background: #d3d5da; }
+    .object.image-b { right: 175px; top: 120px; width: 385px; height: 254px; transform: rotate(2deg); background: #aeb5c1; }
+    .object.image-c { right: 370px; bottom: 112px; width: 295px; height: 205px; background: #c8beb5; }
+
+    .object::after {
+      content: "IMAGE";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(23, 33, 59, 0.42);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+    }
+
+    .object.selected {
+      border: 4px solid var(--accent);
+      outline: 2px solid white;
+      box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.17), 0 16px 35px rgba(44, 48, 57, 0.14);
+    }
+
+    .handle {
+      position: absolute;
+      width: 17px;
+      height: 17px;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      background: white;
+      z-index: 5;
+    }
+
+    .handle.tl { left: -11px; top: -11px; }
+    .handle.tr { right: -11px; top: -11px; }
+    .handle.bl { left: -11px; bottom: -11px; }
+    .handle.br { right: -11px; bottom: -11px; }
+
+    .context-toolbar {
+      position: absolute;
+      left: 143px;
+      top: 104px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 8px;
+      border: 1px solid #cfd5e2;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 14px 34px rgba(49, 58, 89, 0.18);
+    }
+
+    .tool {
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: #3f4b62;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .tool.danger { color: var(--danger); }
+    .tool.sep { width: 1px; height: 24px; margin: 0 4px; padding: 0; background: #d9dee7; }
+
+    .text-object {
+      position: absolute;
+      left: 485px;
+      bottom: 168px;
+      padding: 14px 18px;
+      border: 2px dashed #929aac;
+      background: rgba(255, 255, 255, 0.87);
+      font-family: Georgia, serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      transform: rotate(-1deg);
+    }
+
+    .swatches {
+      position: absolute;
+      left: 905px;
+      bottom: 160px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .swatch {
+      width: 76px;
+      height: 76px;
+      border: 2px solid rgba(23, 33, 59, 0.55);
+      border-radius: 10px;
+    }
+
+    .swatch:nth-child(1) { background: #2f4156; }
+    .swatch:nth-child(2) { background: #d8a786; }
+    .swatch:nth-child(3) { background: #efe8da; }
+
+    .zoom {
+      position: absolute;
+      right: 26px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px;
+      border: 1px solid #cfd5e2;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 12px 28px rgba(49, 58, 89, 0.12);
+    }
+
+    .zoom span { padding: 0 12px; color: #58647a; font-size: 15px; font-weight: 800; }
+
+    .canvas-hint {
+      position: absolute;
+      left: 28px;
+      bottom: 28px;
+      padding: 10px 13px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.85);
+      color: #697287;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .annotation {
+      position: absolute;
+      z-index: 12;
+      padding: 10px 14px;
+      border: 2px solid #4d5870;
+      border-radius: 999px;
+      background: #fff;
+      color: #303b52;
+      font-size: 14px;
+      font-weight: 850;
+      box-shadow: 0 7px 17px rgba(40, 48, 72, 0.13);
+    }
+
+    .annotation::after {
+      content: "";
+      position: absolute;
+      height: 2px;
+      background: #4d5870;
+      transform-origin: left center;
+    }
+
+    .a1 { left: 292px; top: 151px; }
+    .a1::after { width: 82px; left: 78px; top: 45px; transform: rotate(31deg); }
+    .a3 { right: 164px; bottom: 112px; }
+    .a3::after { width: 86px; right: 58px; top: 44px; transform: rotate(142deg); transform-origin: right center; }
+
+    .workspace-caption {
+      position: absolute;
+      right: 34px;
+      top: 106px;
+      z-index: 11;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #4f46e5;
+      font-size: 14px;
+      font-weight: 850;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <header class="sheet-header">
+      <div>
+        <div class="eyebrow">IdeaDock · Project visual boards</div>
+        <h1>High-level UX wireframes</h1>
+      </div>
+      <div class="sheet-summary">
+        One clear flow: choose a board, compose on a neutral canvas, and review anywhere. Project images stay reusable and autosave stays quiet until attention is needed.
+      </div>
+    </header>
+
+    <section class="top-grid">
+      <article class="frame">
+        <span class="screen-tag">1 · Choose or create</span>
+        <div class="app-topbar">
+          <span class="brand">IDEADOCK</span>
+          <span class="dot-sep">/</span>
+          <span class="crumb">Summer launch</span>
+        </div>
+        <div class="boards-content">
+          <h2 class="project-title">Summer launch</h2>
+          <nav class="tabs" aria-label="Project sections">
+            <span class="tab">Overview</span>
+            <span class="tab">Notes &amp; tasks</span>
+            <span class="tab active">Visual boards</span>
+          </nav>
+          <div class="section-head">
+            <div>
+              <h3>Visual boards</h3>
+              <p>Saved visual directions for this project.</p>
+            </div>
+            <span class="btn primary">+ New board</span>
+          </div>
+          <div class="board-grid">
+            <div class="board-card">
+              <div class="preview"><span class="p1"></span><span class="p2"></span><span class="p3"></span></div>
+              <div class="board-meta"><div><strong>Launch direction</strong><small>Edited 12 min ago</small></div><span class="more">•••</span></div>
+            </div>
+            <div class="board-card">
+              <div class="preview alt"><span class="p1"></span><span class="p2"></span><span class="p3"></span></div>
+              <div class="board-meta"><div><strong>Photography references</strong><small>Edited yesterday</small></div><span class="more">•••</span></div>
+            </div>
+            <div class="board-card">
+              <div class="preview"><span class="p2"></span><span class="p3"></span></div>
+              <div class="board-meta"><div><strong>Packaging studies</strong><small>Edited Oct 18</small></div><span class="more">•••</span></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="frame mobile-frame">
+        <span class="screen-tag">3 · Review</span>
+        <div class="mobile-bar">
+          <span>‹ Project</span>
+          <span class="mobile-title">Launch direction</span>
+          <span>•••</span>
+        </div>
+        <div class="mobile-canvas">
+          <div class="mini-board">
+            <span class="mini-object one"></span>
+            <span class="mini-object two"></span>
+            <span class="mini-object three"></span>
+          </div>
+          <div class="pinch-note">Pinch to zoom · Drag to pan</div>
+        </div>
+        <div class="mobile-tabs"><div class="selected">Board</div><div>Images</div><div>Details</div></div>
+      </article>
+
+      <aside class="frame states-card">
+        <span class="screen-tag">Trust states</span>
+        <h3>Saving stays quiet</h3>
+        <p>Only states that require attention interrupt the composition.</p>
+        <div class="state"><strong>✓ Saved</strong><span>Server-confirmed and safe to leave.</span></div>
+        <div class="state"><strong>Saving…</strong><span>Canvas remains available.</span></div>
+        <div class="state issue"><strong>Couldn’t save</strong><span>Your changes are still here. <u>Retry</u></span></div>
+        <div class="state issue"><strong>Changed in another tab</strong><span>Review before overwriting either version.</span></div>
+      </aside>
+    </section>
+
+    <section class="frame workspace-frame">
+      <span class="workspace-caption">2 · Compose</span>
+      <div class="workspace-top">
+        <div class="left">
+          <span class="btn ghost">‹ Project</span>
+          <span class="board-switcher">Launch direction⌄</span>
+        </div>
+        <span class="save-status">Saved</span>
+        <div class="right">
+          <span class="btn icon">↶</span>
+          <span class="btn icon">↷</span>
+          <span class="btn icon">•••</span>
+        </div>
+      </div>
+      <div class="workspace-body">
+        <aside class="asset-deck">
+          <div class="deck-head"><h3>Project images</h3><span class="count">24</span></div>
+          <div class="search">⌕&nbsp; Search images</div>
+          <div class="deck-actions"><span class="btn primary">+ Upload</span><span class="btn">+ Add⌄</span></div>
+          <div class="assets">
+            <div class="asset"><div class="asset-image"></div><div class="asset-label"><strong>Hero portrait</strong><span>Launch brief</span></div></div>
+            <div class="asset"><div class="asset-image"></div><div class="asset-label"><strong>Street detail</strong><span>Photo task</span></div></div>
+            <div class="asset"><div class="asset-image"></div><div class="asset-label"><strong>Material study</strong><span>Project upload</span></div></div>
+            <div class="asset"><div class="asset-image"></div><div class="asset-label"><strong>Type reference</strong><span>Completed task</span></div></div>
+          </div>
+          <div class="collapse">‹ Collapse image deck</div>
+        </aside>
+
+        <div class="canvas">
+          <span class="canvas-label">Neutral canvas</span>
+          <span class="annotation a1">Contextual tools</span>
+          <span class="annotation a3">View controls</span>
+
+          <div class="context-toolbar">
+            <span class="tool">Duplicate</span><span class="tool sep"></span><span class="tool">Send back</span><span class="tool">Bring front</span><span class="tool sep"></span><span class="tool danger">Remove from board</span>
+          </div>
+          <div class="object image-a selected"><i class="handle tl"></i><i class="handle tr"></i><i class="handle bl"></i><i class="handle br"></i></div>
+          <div class="object image-b"></div>
+          <div class="object image-c"></div>
+          <div class="text-object">Warm, tactile, confident</div>
+          <div class="swatches"><span class="swatch"></span><span class="swatch"></span><span class="swatch"></span></div>
+
+          <div class="canvas-hint">Drag, paste, or select an image and choose “Add to board”</div>
+          <div class="zoom"><span class="btn icon">−</span><span>72%</span><span class="btn icon">+</span><span class="btn">Fit board</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

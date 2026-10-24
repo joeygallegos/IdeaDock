@@ -1,0 +1,94 @@
+[
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\__init__.py",
+    "Hash": "01BA4719C80B6FE911B091A7C05124B64EEECE964E09C058EF8F9805DACA546B"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\config.py",
+    "Hash": "433C0FF6AE83AFD0E39480037BB76F39BE2F95FF2909FBC77E44B87E1CD1D00D"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\db.py",
+    "Hash": "025D4626F2CBC917214B1ED92555A43100D01E0481D1DF4CAB7B9BBE64111449"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\main.py",
+    "Hash": "BC6E22002F5860C12B1A0B6AC3D8C5BCE0497C643B06118ED591B472F8974A8C"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\models.py",
+    "Hash": "C984A061B5081F1446D80A9CA74F7A5A9D961019CA32EED9DC43DBA9EBBC1E8B"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\parser.py",
+    "Hash": "C8E45BBEEBE27AC545233D8D4361CE8198CC30D4AAFA0A443D63B59B839D6CF2"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\schemas.py",
+    "Hash": "D1DD397C7CBBB8FBBCDB799A3372353DBDD747DDF353D8185BA0C9C18D5EEE05"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\api\\__init__.py",
+    "Hash": "D8E3AA7A6955D50A5836A796D67DF7C5562BB369C29A5B3F82F5CF196B8EC7BF"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\api\\routes.py",
+    "Hash": "966930B22181C01033DA53C6E8223FF7106626E6A4CC8392F9DD33C63542B14A"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\services\\__init__.py",
+    "Hash": "01BA4719C80B6FE911B091A7C05124B64EEECE964E09C058EF8F9805DACA546B"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\services\\items.py",
+    "Hash": "3D4D55C29AB691A9FFCB206ACA5E517B2A8A38649657C9C6B278A77ED54D1CA3"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\static\\app.js",
+    "Hash": "E144F0D80E5C4D3C73AD5CD502E0BC2603F0436B28F691F6E55E6B398A9BBE8B"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\app\\static\\index.html",
+    "Hash": "354400042B23700C4928054F10D7B84B18CD1E1448C90A921F720174A3D4441F"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\alembic\\env.py",
+    "Hash": "EEB73260AF051BBDC4CA7AA56FD07E08D007D564C47A33F92C3C8C0CD6992024"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\alembic\\script.py.mako",
+    "Hash": "761C298D520AB237894B48E6AA7ACC034A90BEB6368358BD104F4204E935674B"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\alembic\\versions\\0001_initial_schema.py",
+    "Hash": "B7E439D0FDBA3A96406FE9EF5702F6A6700CE59C62748EDE64436959443D1D64"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\alembic\\versions\\0002_item_epics_many_to_many.py",
+    "Hash": "DE5B05668AAA7C20FF5AF2A5F6D71B5B6EA7EC7431F8E6A283BD31336337CB96"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\scripts\\setup-linux-service.sh",
+    "Hash": "51939279DFFDC71E5E233AFF577F5D8FD15093A17035DF85BB62700E141E4544"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\README.md",
+    "Hash": "3002F97CD8879FF698343833859C35531D267222562189CA9D7CFFC36B729EF8"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\requirements.txt",
+    "Hash": "19C995647450DF7F918332CE0828877490F8CF7479DE161F8C51A4731A209736"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\pyproject.toml",
+    "Hash": "B90ECD2C75E4B14B0D1146F57E8A38F1455D41800B4674269F5A8E4BBF412824"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\PLAN.md",
+    "Hash": "795C8A4126136F16BC162921F785ED4D37D8409AB1DACB491A8DB5430F4EDF87"
+  },
+  {
+    "Path": "D:\\Dropbox\\Code\\IdeaDock\\requirements.md",
+    "Hash": "F58FFC110FA80DD7F2D02C05618D217C83F2811111327DEBA53871FEE6327730"
+  }
+]
