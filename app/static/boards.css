@@ -260,14 +260,17 @@ input,textarea {
 }
 #canvas-shell {
   position:relative;
+  display:flex;
+  flex-direction:column;
   flex:1;
   min-width:0;
   overflow:hidden;
   background:#f3f3f1
 }
 #canvas {
-  position:absolute;
-  inset:112px 0 0;
+  position:relative;
+  flex:1;
+  min-height:0;
   overflow:hidden;
   touch-action:none;
   cursor:crosshair
@@ -346,10 +349,11 @@ input,textarea {
   pointer-events:none
 }
 .canvas-tools {
-  position:absolute;
-  top:10px;
-  left:12px;
+  /* Size the toolbar to its controls instead of reserving an empty second row. */
+  position:relative;
   display:flex;
+  flex-wrap:wrap;
+  padding:10px 12px;
   gap:6px;
   z-index:25
 }
@@ -521,9 +525,6 @@ header select {
 #details {
   right:0
 }
-#canvas {
-  inset:58px 0 0
-}
 #selection-tools {
   display:none!important
 }
@@ -532,7 +533,7 @@ header select {
   width:90%
 }
 .canvas-tools {
-  top:6px
+  padding:6px 12px
 }
 #comparison {
   grid-template-columns:1fr
