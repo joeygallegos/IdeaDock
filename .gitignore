@@ -26,6 +26,7 @@ htmlcov/
 
 # Runtime-generated storage and logs
 storage/uploads/
+storage/backups/
 storage/*.log
 storage/*.db*
 

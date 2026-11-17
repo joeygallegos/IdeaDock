@@ -1,6 +1,7 @@
 """Upgrade storage, recognizing only the two documented unversioned SQLite schemas."""
 from __future__ import annotations
 
+import argparse
 import importlib.util
 from pathlib import Path
 
@@ -117,7 +118,7 @@ def detect_baseline(engine: Engine) -> str | None:
     )
 
 
-def migrate_database() -> None:
+def migrate_database(board_owner_map: str | None = None) -> None:
     from app.config import settings
 
     engine = create_engine(settings.database_url, future=True)
@@ -127,6 +128,8 @@ def migrate_database() -> None:
         engine.dispose()
     config = Config(str(ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(ROOT / "alembic"))
+    if board_owner_map is not None:
+        config.attributes["board_owner_map"] = board_owner_map
     if baseline is not None:
         # Both verified shapes contain the complete 0001 schema. Replay idempotent
         # 0002 even when item_epics exists, repairing missing legacy memberships.
@@ -137,7 +140,10 @@ def migrate_database() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--board-owner-map", help="JSON file mapping old Epic IDs to destination Item IDs")
+    args = parser.parse_args()
     try:
-        migrate_database()
+        migrate_database(args.board_owner_map)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc

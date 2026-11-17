@@ -532,6 +532,7 @@
 
 <body class="font-sans text-ink">
   <main x-data="ideaDockApp()" x-init="init()" x-cloak
+    @focus.window="searchBoards(); if (focusMode) loadItemBoards(selectedItem?.id)"
     @keydown.escape.window="if (lightboxAsset) { lightboxAsset = null } else if (moodBoardFocus) { moodBoardFocus = false } else if (focusMode) { closeFocusMode() }"
     class="mx-auto max-w-[96rem] px-3 py-5 sm:px-4 lg:px-5 lg:py-6 2xl:px-8">
     <section class="page-shell">
@@ -571,25 +572,23 @@
           </template>
         </section>
 
-        <section x-show="filters.epic_id" x-cloak x-init="loadProjectBoards(filters.epic_id); $watch('filters.epic_id', value => loadProjectBoards(value))"
-          class="work-panel mb-5 p-5" aria-labelledby="project-boards-heading">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="project-boards-heading" class="text-lg font-bold">Project boards</h2>
-            <a :href="'/static/boards.html?project=' + encodeURIComponent(filters.epic_id) + '&create=1'"
-              class="btn-secondary">Create board</a>
-          </div>
-          <p x-show="projectBoardsLoading" class="mt-2 text-sm text-slate-500">Loading boards…</p>
-          <p x-show="projectBoardsError" x-text="projectBoardsError" role="alert" class="mt-2 text-sm text-rose-700"></p>
-          <button x-show="projectBoardsError" @click="loadProjectBoards(filters.epic_id)" class="btn-secondary mt-2">Retry</button>
-          <p x-show="!projectBoardsLoading && !projectBoardsError && !projectBoards.length" class="mt-2 text-sm text-slate-500">
-            No boards created for this project. Create a board, then upload images inside it.
-          </p>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <template x-for="board in projectBoards" :key="board.id">
-              <a :href="'/static/boards.html?project=' + encodeURIComponent(filters.epic_id) + '&board=' + board.id"
-                class="btn-secondary" x-text="board.name"></a>
+        <section class="work-panel mb-5 p-5" aria-labelledby="visual-boards-heading">
+          <h2 id="visual-boards-heading" class="text-lg font-bold">Visual Boards</h2>
+          <label for="home-board-search" class="mt-2 block text-sm">Search by board name</label>
+          <input id="home-board-search" type="search" x-model="boardQuery" @input.debounce.200ms="searchBoards()"
+            class="field-shell mt-2 px-3 py-2" placeholder="Board name">
+          <label for="home-board-results" class="mt-2 block text-sm">Visual Board</label>
+          <select id="home-board-results" @change="openBoardResult($event.target.value)"
+            :disabled="boardSearchLoading || !!boardSearchError || !boardResults.length" class="field-shell mt-2 px-3 py-2">
+            <option value="">Choose a visual board</option>
+            <template x-for="board in boardResults" :key="board.id">
+              <option :value="String(board.id)" x-text="`${board.name} — ${board.item_title}`"></option>
             </template>
-          </div>
+          </select>
+          <p x-show="boardSearchLoading" role="status" class="mt-2 text-sm">Loading boards…</p>
+          <p x-show="boardSearchError" x-text="boardSearchError" role="alert" class="mt-2 text-sm text-rose-700"></p>
+          <button x-show="boardSearchError" @click="searchBoards()" class="btn-secondary mt-2">Retry board search</button>
+          <p x-show="!boardSearchLoading && !boardSearchError && !boardResults.length" role="status" class="mt-2 text-sm">No matching visual boards. Open an item's Focused Editor to create one.</p>
         </section>
 
         <section class="mt-7 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(22rem,0.75fr)]">
@@ -1182,18 +1181,21 @@
             </div>
 
             <section class="rounded-[1.2rem] border border-[rgba(99,91,255,0.1)] bg-white/72 p-4"
-              aria-labelledby="focus-project-boards-heading">
-              <p id="focus-project-boards-heading" class="micro-label">Project boards</p>
-              <p class="mt-2 text-sm text-muted">Create a visual board for a project linked to this item. Save project changes first.</p>
-              <div class="mt-3 flex flex-wrap gap-2" x-show="itemEpics(selectedItem).length">
-                <template x-for="epic in itemEpics(selectedItem)" :key="`focus-create-board-${epic.id}`">
-                  <a :href="boardCreateUrl(epic.id)" target="_blank" rel="noopener"
-                    class="btn-secondary" x-text="`Create board for ${epic.name}`"></a>
+              aria-labelledby="focus-item-boards-heading">
+              <p id="focus-item-boards-heading" class="micro-label">Visual Boards</p>
+              <p class="mt-2 text-sm text-muted">Boards belong to this item, independently of its Epics.</p>
+              <a :href="boardCreateUrl(selectedItem?.id)" target="_blank" rel="noopener"
+                class="btn-secondary mt-3">Create board</a>
+              <button @click="loadItemBoards(selectedItem.id)" class="btn-secondary mt-3">Refresh boards</button>
+              <p x-show="itemBoardsLoading" role="status" class="mt-2 text-sm">Loading boards…</p>
+              <p x-show="itemBoardsError" x-text="itemBoardsError" role="alert" class="mt-2 text-sm text-rose-700"></p>
+              <p x-show="!itemBoardsLoading && !itemBoardsError && !itemBoards.length" class="mt-2 text-sm">No visual boards for this item yet.</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <template x-for="board in itemBoards" :key="board.id">
+                  <a :href="boardUrl(selectedItem?.id, board.id)" target="_blank" rel="noopener"
+                    class="btn-secondary" x-text="board.name"></a>
                 </template>
               </div>
-              <p x-show="!itemEpics(selectedItem).length" class="mt-3 text-sm text-slate-500">
-                Add and save a project under Epics to create its board.
-              </p>
             </section>
 
             <label

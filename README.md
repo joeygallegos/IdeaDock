@@ -182,21 +182,25 @@ Plan backyard party #house #family -idea
 
 ## Project visual boards
 
-Choose a project on the home screen, then use **Create board** in **Project boards**. Name the board to create it, then upload, drop, or paste images inside the workspace. Existing named boards appear under their project. Selecting a project never creates a board; cancelling the name dialog creates nothing. The project chooser includes completed projects. Projects use the existing Epic records; boards do not create copies of notes or tasks.
+Visual Boards belong directly to the item opened in the Focused Editor (`Item.id`), independently of its Epics. Open an item, use **Create board** in its Visual Boards section, and name the board before uploading, dropping, or pasting images. Items without Epics can own boards. Changing an item's Epics does not move its boards, and cancelling the name dialog creates nothing.
 
-The focused item editor also offers **Project boards** links for each project currently attached to the item. Save project changes first; each link opens that project's board naming step in a new tab so the editor stays open.
+The home screen and Visual Boards workspace offer board-name search and selection. Board names are the primary labels; owner item titles distinguish boards with the same name. Selecting a result opens that exact board. The Focused Editor lists its item's boards and opens creation in a new tab. Without an owner context, open an item's Focused Editor to create a board.
 
-The image deck combines uploads from all project items (including completed items) with images uploaded directly to the project. Select an image and choose **Add to board**, or drag it onto the canvas. Uploading into the deck adds a reusable source image; dropping or pasting an image onto a board also places it there. Multiple boards and placements share source files without changing them.
+The image deck combines the owner item's attachments with its direct board uploads, including for completed or archived owners. Images from other items sharing an Epic are not included. Select an image and choose **Add to board**, or drag it onto the canvas. Uploading into the deck adds a reusable source image; dropping or pasting an image onto a board also places it there. Multiple boards owned by the same item share sources without duplicating files.
 
 Use **Select** for objects and marquee selection, Shift to extend selection, and **Hand**, Space-drag, middle-mouse drag, or trackpad scrolling to pan. Arrow keys move selected objects by one canvas unit; Shift+Arrow moves by ten. Image size controls preserve proportions. **Add object** creates text labels or color swatches; swatches accept a picker, hex value, or a color sampled from an image. Undo/redo applies during the current editing session. Smaller screens show an explicit **View only** workspace with browsing, pan, and zoom.
 
 Completed edits save automatically. **Saved** means the server confirmed persistence. Failed saves retain local work and offer retry; do not close the tab until work is saved or copied. When another tab saves first, autosave pauses. **Keep my changes as a copy** preserves the complete local composition in a separate board. **Open latest** requires confirmation; replacing the latest version requires comparison and explicit confirmation. This is conflict detection, not real-time collaboration.
 
-Removing a placement or deleting a board preserves source images. Permanent source-image deletion is blocked while any board uses it, with the affected boards identified. Moving a source item to another project removes it from the old project's deck but preserves existing board placements. Missing image files display placeholders so layout remains recoverable.
+Removing a placement or deleting a board preserves source images. Permanent source-image deletion is blocked while any board uses it, with the affected boards identified. Migrated boards retain access to already placed images even when those images belong to another item; those images do not become available to unrelated boards. Owner deletion is restricted while boards or direct uploads remain. Missing image files display placeholders so layout remains recoverable.
 
 ### Storage and upgrades
 
-Run `python -m alembic upgrade head` using the application's virtual environment before running the updated application. The board migration adds separate board, project-image, and image-reference tables while preserving existing item-upload records. Do not use `alembic stamp head` as a substitute for running migrations.
+Stop the application and run migrations using its virtual environment before starting the updated version. For databases without existing boards or direct board uploads, run `python -m alembic upgrade head`. The ownership migration preserves board IDs, layouts, revisions, upload paths, and source references. Do not use `alembic stamp head` as a substitute for running migrations.
+
+Existing Epic-owned boards and direct uploads require an explicit JSON mapping from each old Epic ID to the destination Item ID, for example `{"12": 48, "15": 63}`. All boards and direct uploads belonging to one Epic move together to the specified item. Review the IDs before running `python -m scripts.migrate_database --board-owner-map owners.json`, or `python -m alembic -x board_owner_map=owners.json upgrade head`. Missing mappings and nonexistent destination items stop the ownership migration before it changes ownership. Existing files and image keys are retained; no image bytes are copied. Keep the mapping with your upgrade records.
+
+The ownership migration cannot be automatically downgraded because an item's later Epic membership does not identify its original owner. To roll back this upgrade, restore the pre-upgrade database and uploads together. SQLite upgrades validate foreign keys before committing and roll back on validation failure; MySQL schema changes are not transactional, so retain the backup for recovery from interrupted DDL.
 
 For an unversioned legacy SQLite installation, run `python -m scripts.migrate_database` from the repository root instead; the Linux setup script uses this same helper. It recognizes the complete original or many-to-many legacy schema, records the original baseline, and runs all subsequent migrations, including membership backfill. It also handles fresh and already-tracked databases. Unknown schemas require manual inspection and are not automatically stamped or repaired.
 
@@ -204,13 +208,15 @@ Back up the database and the entire configured `UPLOAD_DIR` together before upgr
 
 ### Board API
 
-All board routes are under `/api/projects/{project_id}`:
+Board operations use `/api/items/{item_id}`:
 
 - `GET/POST /boards` lists or creates boards.
 - `GET/PUT/DELETE /boards/{board_id}` loads, saves, or deletes a board. Saves and deletes require the last confirmed revision; stale revisions return HTTP 409.
 - `POST /boards/{board_id}/copy` creates a board from the supplied complete local state.
-- `GET/POST /assets` lists the combined image deck or uploads a project-owned image.
-- `DELETE /assets/{asset_id}` deletes an unused project-owned source image.
+- `GET/POST /board-assets` lists the item's image deck or uploads a direct board image.
+- `DELETE /board-assets/{asset_id}` deletes an unused direct board image.
+
+`GET /api/boards?q=...` searches board names case-insensitively and returns summaries containing `id`, `name`, `item_id`, and `item_title`; an empty query lists all boards. Old `/api/projects/{project_id}/...` board endpoints return HTTP 410. Old `?project=` workspace links must be replaced with `?item={item_id}&board={board_id}` links; Epic IDs are never interpreted as Item IDs.
 
 Boards store image references, text, swatches, geometry, back-to-front object order, and the last canvas view. View changes do not change object geometry. API clients must retain local work on HTTP 409 and obtain user confirmation before replacing a newer version. Source-deletion conflicts also return HTTP 409 with affected board names.
 

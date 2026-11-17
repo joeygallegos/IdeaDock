@@ -544,3 +544,21 @@ header select {
 
 }
 
+
+/* Keep the board chooser usable with long names and narrow viewports. */
+header label {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+  max-width:100%
+}
+#board-results {
+  max-width:min(32rem,85vw)
+}
+#board-search {
+  min-height:44px;
+  padding:10px;
+  border:1px solid #c8cad5;
+  border-radius:7px
+}

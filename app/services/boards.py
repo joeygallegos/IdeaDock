@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,6 @@ from app.config import settings
 from app.models import (
     BoardAssetAccess,
     BoardAssetReference,
-    Epic,
     Item,
     MoodBoardAsset,
     ProjectAsset,
@@ -28,15 +27,15 @@ class BoardError(Exception):
         self.detail = detail
 
 
-def require_project(session: Session, project_id: int) -> None:
-    if session.get(Epic, project_id) is None:
-        raise BoardError(404, "Project not found.")
+def require_item(session: Session, item_id: int) -> None:
+    if session.get(Item, item_id) is None:
+        raise BoardError(404, "Item not found.")
 
 
-def require_board(session: Session, project_id: int, board_id: int) -> VisualBoard:
+def require_board(session: Session, item_id: int, board_id: int) -> VisualBoard:
     board = session.scalar(
         select(VisualBoard)
-        .where(VisualBoard.id == board_id, VisualBoard.project_id == project_id)
+        .where(VisualBoard.id == board_id, VisualBoard.item_id == item_id)
         .execution_options(populate_existing=True)
     )
     if board is None:
@@ -57,24 +56,24 @@ def asset_dict(asset, kind: str, source_name: str, item_id: int | None = None) -
     )
 
 
-def project_assets(session: Session, project_id: int) -> list[dict]:
-    require_project(session, project_id)
-    # EXISTS avoids duplicates for both legacy and many-to-many membership.
-    # Completed and archived items deliberately remain part of the project library.
+def item_assets(session: Session, item_id: int) -> list[dict]:
+    require_item(session, item_id)
+    # Epic membership never expands the library: only the owner's images are
+    # available for new placements, including completed or archived owners.
     assets = session.scalars(
         select(MoodBoardAsset)
-        .join(Item)
-        .where(or_(Item.epic_id == project_id, Item.epics.any(Epic.id == project_id)))
+        .where(MoodBoardAsset.item_id == item_id)
         .order_by(MoodBoardAsset.id)
     ).all()
     result = [asset_dict(a, "item", a.item.title, a.item_id) for a in assets]
-    project = session.get(Epic, project_id)
+    owner = session.get(Item, item_id)
     direct_assets = session.scalars(
         select(ProjectAsset)
-        .where(ProjectAsset.project_id == project_id)
+        .where(ProjectAsset.item_id == item_id)
         .order_by(ProjectAsset.id)
     )
-    result.extend(asset_dict(a, "project", project.name) for a in direct_assets)
+    # The legacy source kind is persisted in layouts; retain it across migration.
+    result.extend(asset_dict(a, "project", owner.title) for a in direct_assets)
     return result
 
 
@@ -96,14 +95,14 @@ def board_dict(session: Session, board: VisualBoard) -> dict:
         if asset is not None:
             source = (
                 asset.item.title if kind == "item"
-                else session.get(Epic, asset.project_id).name
+                else session.get(Item, asset.item_id).title
             )
             assets.append(asset_dict(
                 asset, kind, source, asset.item_id if kind == "item" else None
             ))
     return dict(
         id=board.id,
-        project_id=board.project_id,
+        item_id=board.item_id,
         name=board.name,
         revision=board.revision,
         objects=layout["objects"],
@@ -114,14 +113,25 @@ def board_dict(session: Session, board: VisualBoard) -> dict:
     )
 
 
-def list_boards(session: Session, project_id: int) -> list[dict]:
-    require_project(session, project_id)
+def list_boards(session: Session, item_id: int) -> list[dict]:
+    require_item(session, item_id)
     rows = session.scalars(
         select(VisualBoard)
-        .where(VisualBoard.project_id == project_id)
+        .where(VisualBoard.item_id == item_id)
         .order_by(VisualBoard.updated_at.desc(), VisualBoard.id.desc())
     )
     return [board_dict(session, board) for board in rows]
+
+
+def search_boards(session: Session, q: str = "") -> list[dict]:
+    query = select(VisualBoard.id, VisualBoard.name, VisualBoard.item_id, Item.title).join(
+        Item, Item.id == VisualBoard.item_id
+    )
+    if q.strip():
+        # Escape SQL wildcard characters: a name search treats % and _ literally.
+        query = query.where(func.lower(VisualBoard.name).contains(q.strip().lower(), autoescape=True))
+    rows = session.execute(query.order_by(func.lower(VisualBoard.name), VisualBoard.id))
+    return [dict(id=row.id, name=row.name, item_id=row.item_id, item_title=row.title) for row in rows]
 
 
 def encode_layout(payload: BoardCreate) -> str:
@@ -132,10 +142,10 @@ def encode_layout(payload: BoardCreate) -> str:
 
 
 def replace_references(session, board, payload, retained):
-    allowed = {a["key"] for a in project_assets(session, board.project_id)} | retained
+    allowed = {a["key"] for a in item_assets(session, board.item_id)} | retained
     keys = {o.asset_key for o in payload.objects if o.type == "image"}
     if not keys <= allowed:
-        raise BoardError(400, "An image is not available to this project.")
+        raise BoardError(400, "An image is not available to this item.")
     # Lock sources before replacing references. FK RESTRICT is the final guard
     # against concurrent deletion, including SQLite where FOR UPDATE is ignored.
     for key in sorted(keys):
@@ -159,21 +169,21 @@ def replace_references(session, board, payload, retained):
         )
         session.add(BoardAssetReference(**reference))
         # Historical access allows recovery of a local placement removed remotely
-        # after its item moved away. It grants nothing to unrelated boards/projects.
+        # after migration narrows its library. It grants nothing to unrelated items.
         if key not in historical_keys:
             session.add(BoardAssetAccess(**reference))
 
 
 def create_board(
-    session: Session, project_id: int, payload: BoardCreate, source_id: int | None = None
+    session: Session, item_id: int, payload: BoardCreate, source_id: int | None = None
 ) -> dict:
-    require_project(session, project_id)
+    require_item(session, item_id)
     retained = set()
     if source_id is not None:
-        source = require_board(session, project_id, source_id)
+        source = require_board(session, item_id, source_id)
         retained = reference_keys(session, source.id, BoardAssetAccess)
     board = VisualBoard(
-        project_id=project_id, name=payload.name, layout=encode_layout(payload), revision=1
+        item_id=item_id, name=payload.name, layout=encode_layout(payload), revision=1
     )
     try:
         session.add(board)
@@ -186,10 +196,10 @@ def create_board(
     return board_dict(session, board)
 
 
-def conflict(session: Session, project_id: int, board_id: int) -> None:
+def conflict(session: Session, item_id: int, board_id: int) -> None:
     # Release the old transaction snapshot so recovery sees the latest commit.
     session.rollback()
-    board = require_board(session, project_id, board_id)
+    board = require_board(session, item_id, board_id)
     raise BoardError(409, dict(
         code="revision_conflict",
         message="This board changed in another tab. Your local changes have not been saved.",
@@ -198,9 +208,9 @@ def conflict(session: Session, project_id: int, board_id: int) -> None:
 
 
 def save_board(
-    session: Session, project_id: int, board_id: int, payload: BoardSave
+    session: Session, item_id: int, board_id: int, payload: BoardSave
 ) -> dict:
-    require_board(session, project_id, board_id)
+    require_board(session, item_id, board_id)
     try:
         # One conditional database write, not a check followed by an update:
         # exactly one tab can claim a revision under concurrent requests.
@@ -208,7 +218,7 @@ def save_board(
             update(VisualBoard)
             .where(
                 VisualBoard.id == board_id,
-                VisualBoard.project_id == project_id,
+                VisualBoard.item_id == item_id,
                 VisualBoard.revision == payload.revision,
             )
             .values(
@@ -219,28 +229,28 @@ def save_board(
             .execution_options(synchronize_session=False)
         )
         if result.rowcount != 1:
-            conflict(session, project_id, board_id)
-        board = require_board(session, project_id, board_id)
+            conflict(session, item_id, board_id)
+        board = require_board(session, item_id, board_id)
         retained = reference_keys(session, board_id, BoardAssetAccess)
         replace_references(session, board, payload, retained)
         session.commit()
     except Exception:
         session.rollback()
         raise
-    return board_dict(session, require_board(session, project_id, board_id))
+    return board_dict(session, require_board(session, item_id, board_id))
 
 
-def delete_board(session: Session, project_id: int, board_id: int, revision: int) -> None:
-    require_board(session, project_id, board_id)
+def delete_board(session: Session, item_id: int, board_id: int, revision: int) -> None:
+    require_board(session, item_id, board_id)
     result = session.execute(
         delete(VisualBoard).where(
             VisualBoard.id == board_id,
-            VisualBoard.project_id == project_id,
+            VisualBoard.item_id == item_id,
             VisualBoard.revision == revision,
         )
     )
     if result.rowcount != 1:
-        conflict(session, project_id, board_id)
+        conflict(session, item_id, board_id)
     session.commit()
 
 
@@ -255,7 +265,7 @@ def used_by_boards(session: Session, kind: str, asset_id: int) -> list[dict]:
         .where(column == asset_id)
         .order_by(VisualBoard.id)
     )
-    return [dict(id=b.id, project_id=b.project_id, name=b.name) for b in rows]
+    return [dict(id=b.id, item_id=b.item_id, name=b.name) for b in rows]
 
 
 def protect_asset(session: Session, kind: str, asset_id: int) -> None:
@@ -287,23 +297,23 @@ def validate_image(filename: str, content: bytes) -> str:
     return suffix
 
 
-def upload_project_asset(
-    session: Session, project_id: int, filename: str, content: bytes,
+def upload_board_asset(
+    session: Session, item_id: int, filename: str, content: bytes,
     caption: str | None = None,
 ) -> dict:
-    require_project(session, project_id)
+    require_item(session, item_id)
     suffix = validate_image(filename, content)
     # Original names are display metadata; generated paths never include directories.
     filename = filename.replace("\\", "/").split("/")[-1][:255]
     if caption is not None and len(caption) > 255:
         raise ValueError("Caption must be at most 255 characters.")
     stem = sanitize_filename_stem(Path(filename).stem)[:80]
-    target = settings.upload_path / f"project-{project_id}" / f"{stem}-{uuid4().hex}{suffix}"
+    target = settings.upload_path / f"board-item-{item_id}" / f"{stem}-{uuid4().hex}{suffix}"
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         target.write_bytes(content)
         asset = ProjectAsset(
-            project_id=project_id,
+            item_id=item_id,
             file_path=target.relative_to(settings.upload_path).as_posix(),
             original_filename=filename,
             caption=caption,
@@ -314,15 +324,15 @@ def upload_project_asset(
         session.rollback()
         target.unlink(missing_ok=True)
         raise
-    return asset_dict(asset, "project", session.get(Epic, project_id).name)
+    return asset_dict(asset, "project", session.get(Item, item_id).title)
 
 
 def delete_source_asset(
-    session: Session, kind: str, asset_id: int, project_id: int | None = None
+    session: Session, kind: str, asset_id: int, item_id: int | None = None
 ) -> None:
     model = MoodBoardAsset if kind == "item" else ProjectAsset
     asset = session.scalar(select(model).where(model.id == asset_id).with_for_update())
-    if asset is None or (kind == "project" and asset.project_id != project_id):
+    if asset is None or (kind == "project" and asset.item_id != item_id):
         raise BoardError(404, "Asset not found.")
     protect_asset(session, kind, asset_id)
     target = (settings.upload_path / asset.file_path).resolve()

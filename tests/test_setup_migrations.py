@@ -11,7 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 BASE = '0001_initial_schema'
 MULTI = '0002_item_epics_many_to_many'
-HEAD = '0003_visual_boards'
+HEAD = '0004_item_board_ownership'
 BOARD_TABLES = {'project_assets', 'visual_boards', 'board_asset_references', 'board_asset_access'}
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, event, pool
 
 from app.config import settings
 from app.db import Base
@@ -38,11 +38,33 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+    if connectable.dialect.name == "sqlite":
+        @event.listens_for(connectable, "connect")
+        def sqlite_migration_connection(dbapi_connection, _record):
+            # Batch rebuilds must not trigger incoming CASCADE/RESTRICT actions.
+            # Explicit BEGIN below makes SQLite DDL and data changes atomic;
+            # foreign_key_check validates the complete result before commit.
+            dbapi_connection.isolation_level = None
+            dbapi_connection.execute("PRAGMA foreign_keys=OFF")
 
-        with context.begin_transaction():
-            context.run_migrations()
+        @event.listens_for(connectable, "begin")
+        def sqlite_begin(connection):
+            connection.exec_driver_sql("BEGIN")
+
+    with connectable.connect() as connection:
+        sqlite = connection.dialect.name == "sqlite"
+        context.configure(connection=connection, target_metadata=target_metadata,
+                          **({"transactional_ddl": True} if sqlite else {}))
+        try:
+            with context.begin_transaction():
+                context.run_migrations()
+                if sqlite and connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall():
+                    raise ValueError("Migration produced invalid foreign keys; changes were rolled back.")
+        finally:
+            if sqlite:
+                # Use the DBAPI cursor to avoid opening another transaction
+                # before restoring enforcement on this migration connection.
+                connection.connection.driver_connection.execute("PRAGMA foreign_keys=ON")
 
 
 if context.is_offline_mode():

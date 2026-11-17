@@ -20,7 +20,7 @@ const uid = () => window.crypto?.randomUUID?.() || `o-${Date.now()}-${Math.rando
 
 class BoardWorkspace {
   constructor() {
-    this.project = null;
+    this.itemId = null;
     this.board = null;
     this.boards = [];
     this.assets = [];
@@ -37,6 +37,9 @@ class BoardWorkspace {
     this.gesture = null;
     this.pointers = new Map();
     this.loadVersion = 0;
+    this.catalogVersion = 0;
+    this.catalog = [];
+    this.ownerTitle = "";
     this.bind();
     this.mode();
     this.start();
@@ -63,7 +66,7 @@ class BoardWorkspace {
   }
 
   path(suffix = '') {
-    return `/api/projects/${this.project}${suffix}`;
+    return `/api/items/${this.itemId}${suffix}`;
   }
 
   notice(text) {
@@ -130,33 +133,54 @@ class BoardWorkspace {
     };
   }
 
-  async start() {
+  async loadCatalog() {
+    // Search requests may finish out of order; only the latest result is selectable.
+    const version = this.catalogVersion = (this.catalogVersion || 0) + 1;
+    $('board-results').disabled = true;
+    $('board-search-status').textContent = 'Loading boards…';
+    $('board-search-retry').hidden = true;
     try {
-      const projects = await this.api('/api/epics');
-      projects.forEach(p => {
-        const o = el('option', p.name);
-        o.value = p.id;
-        $('projects').append(o);
+      const catalog = await this.api(`/api/boards?q=${encodeURIComponent($('board-search').value || '')}`);
+      if (version !== this.catalogVersion) return;
+      this.catalog = catalog;
+      $('board-results').replaceChildren(el('option', 'Choose a visual board'));
+      $('board-results').firstChild.value = '';
+      catalog.forEach(board => {
+        const option = el('option', `${board.name} — ${board.item_title}`);
+        option.value = board.id;
+        $('board-results').append(option);
       });
-      if (!projects.length) {
-        this.notice('Create a project in IdeaDock before adding visual boards.');
-        $('new-board').disabled = true;
-        return;
-      }
-      const params = new URLSearchParams(location.search), requested = params.get('project');
-      // Unscoped navigation must not silently choose a different project.
-      this.project = projects.some(p => String(p.id) === requested) ? requested : '';
-      $('projects').value = this.project;
-      const loaded = await this.loadProject();
-      if (!loaded) return;
-      if (params.get('create') === '1') await this.create();
-      else if (params.get('board')) await this.open(params.get('board'));
-    } catch {
-      this.notice('Could not load projects. Reload this page to retry.');
+      $('board-results').value = this.board?.id || '';
+      $('board-results').disabled = !catalog.length;
+      $('board-search-status').textContent = catalog.length ? '' : 'No matching visual boards.';
+    } catch (error) {
+      if (version !== this.catalogVersion) return;
+      this.catalog = [];
+      $('board-search-status').textContent = error.message;
+      $('board-search-retry').hidden = false;
     }
   }
 
-  async loadProject() {
+  async start() {
+    await this.loadCatalog();
+    const params = new URLSearchParams(location.search);
+    // Legacy Epic links cannot safely be interpreted as item IDs.
+    if (params.has('project')) {
+      this.notice('This board link uses the old Epic ownership. Open the board by name above.');
+      return;
+    }
+    this.itemId = params.get('item') || '';
+    try {
+      const loaded = await this.loadItemBoards();
+      if (!loaded) return;
+      if (params.get('create') === '1') await this.create();
+      else if (params.get('board')) await this.open(params.get('board'));
+    } catch (error) {
+      this.notice(error.message + ' Reload this page to retry.');
+    }
+  }
+
+  async loadItemBoards() {
     const version = ++this.loadVersion, path = this.path();
     this.board = null;
     this.saveState = null;
@@ -168,23 +192,25 @@ class BoardWorkspace {
     this.boards = [];
     this.assets = [];
     this.renderList();
-    $('new-board').disabled = !this.project || this.readOnly;
-    $('project-back').href = this.project ? `/?project=${this.project}` : '/';
-    if (!this.project) {
+    $('new-board').disabled = !this.itemId || this.readOnly;
+    $('item-back').href = this.itemId ? `/?item=${encodeURIComponent(this.itemId)}` : '/';
+    if (!this.itemId) {
       this.status('');
-      this.notice('Choose a project before creating or opening a board.');
+      this.notice('Choose a visual board above, or open an item’s Focused Editor in IdeaDock to create one.');
       return;
     }
     this.status('Loading…');
     try {
-      const [boards, assets] = await Promise.all([this.api(`${path}/boards`), this.api(`${path}/assets`)]);
+      const [boards, assets, owner] = await Promise.all([this.api(`${path}/boards`), this.api(`${path}/board-assets`), this.api(path)]);
       if (version !== this.loadVersion) return;
       this.boards = boards;
       this.assets = assets;
+      this.ownerTitle = owner.title;
+      $('board-owner').textContent = owner.title;
       this.renderList();
       this.status('');
       if (!this.readOnly) this.notice('');
-      history.replaceState(null, '', `?project=${this.project}`);
+      history.replaceState(null, '', `?item=${encodeURIComponent(this.itemId)}`);
       return true;
     } catch (error) {
       this.status('Could not load boards');
@@ -209,7 +235,7 @@ class BoardWorkspace {
   renderList() {
     $('boards').replaceChildren();
     $('switcher').replaceChildren();
-    if (!this.boards.length && this.project) $('boards').append(el('p', 'No boards created for this project. Choose Create board, then upload images inside it.'));
+    if (!this.boards.length && this.itemId) $('boards').append(el('p', 'No boards created for this item. Choose Create board, then upload images inside it.'));
     this.boards.forEach(board => {
       const option = el('option', board.name);
       option.value = board.id;
@@ -271,14 +297,15 @@ class BoardWorkspace {
           method: verb === 'Duplicate' ? 'POST' : 'PUT', body: JSON.stringify(payload)
         });
       }
-      await this.loadProject();
+      await this.loadItemBoards();
+      await this.loadCatalog();
     } catch (error) {
       this.notice(error.status === 409 ? 'This board changed elsewhere. Reload the list before managing it; no changes were overwritten.' : error.message);
     }
   }
 
   async create() {
-    if (this.readOnly || !this.project || !(await this.canLeave())) return;
+    if (this.readOnly || !this.itemId || !(await this.canLeave())) return;
     const name = await this.askName('Name your visual board');
     if (!name?.trim() || this.readOnly) return;
     try {
@@ -290,28 +317,44 @@ class BoardWorkspace {
       this.boards.push(board);
       this.renderList();
       this.accept(board);
+      await this.loadCatalog();
     }
     catch (error) {
       this.notice(error.message);
     }
   }
 
-  async open(id) {
+  async open(id, itemId = this.itemId) {
     if (!(await this.canLeave())) {
       $('switcher').value = this.board?.id;
+      $('board-results').value = this.board?.id || '';
       return;
     }
     clearTimeout(this.timer);
     const version = ++this.loadVersion;
     try {
-      const [board, assets] = await Promise.all([this.api(this.path(`/boards/${id}`)), this.api(this.path('/assets'))]);
+      const path = `/api/items/${encodeURIComponent(itemId)}`;
+      const [board, assets, boards, owner] = await Promise.all([this.api(`${path}/boards/${encodeURIComponent(id)}`), this.api(`${path}/board-assets`), this.api(`${path}/boards`), this.api(path)]);
       if (version === this.loadVersion) {
+        // Commit the new owner only after every request succeeds, keeping local
+        // work and upload ownership intact when navigation fails.
+        this.itemId = String(itemId);
         this.assets = assets;
+        this.boards = boards;
+        this.ownerTitle = owner.title;
+        $('board-owner').textContent = owner.title;
+        $('item-back').href = `/?item=${encodeURIComponent(itemId)}`;
+        this.uploads = [];
+        this.renderList();
         this.accept(board);
       }
     }
     catch (error) {
+      if (version !== this.loadVersion) return;
+      $('board-results').value = this.board?.id || '';
+      $('switcher').value = this.board?.id || '';
       this.notice(error.message);
+      if (this.saveState?.dirty && !this.saveState.conflict) this.schedule();
     }
   }
 
@@ -328,6 +371,9 @@ class BoardWorkspace {
     $('list').hidden = true;
     $('workspace').hidden = false;
     $('switcher').value = board.id;
+    history.replaceState(null, '', `?item=${encodeURIComponent(this.itemId)}&board=${board.id}`);
+    $('board-results').value = board.id;
+    $('new-board').disabled = this.readOnly;
     this.status('Saved');
     this.renderDeck();
     this.render();
@@ -342,7 +388,7 @@ class BoardWorkspace {
     const viewOnlyNotice = 'View only. Use a larger screen to edit. Pan and zoom to inspect this board.';
     document.body.classList.toggle('view-only', this.readOnly);
     $('view-only').hidden = !this.readOnly;
-    $('new-board').disabled = !this.project || this.readOnly;
+    $('new-board').disabled = !this.itemId || this.readOnly;
     if (this.readOnly) {
       // Browsing uses a temporary camera. Shrinking the window must not save
       // a fit/pan/zoom operation over the last editable canvas view.
@@ -451,19 +497,21 @@ class BoardWorkspace {
         });
         if (!stillCurrent()) {
           this.notice('Your copy was saved. Local edits remain here; reopen recovery when ready.');
+          await this.loadCatalog();
           return;
         }
         this.boards.push(copied);
         this.renderList();
         $('conflict').close();
         this.accept(copied);
+        await this.loadCatalog();
       } else if (choice === 'latest') {
         if (!(await this.askConfirm('Open the latest saved board? Your current local edits will be left behind.', 'Open latest'))) return;
         // Refresh the reusable library with the recovered composition. Commit
         // neither result until both reads succeed and recovery is still active.
         const [latest, assets] = await Promise.all([
           this.api(this.path(`/boards/${local.id}`)),
-          this.api(this.path('/assets'))
+          this.api(this.path('/board-assets'))
         ]);
         if (!stillCurrent()) return;
         this.assets = assets;
@@ -471,6 +519,7 @@ class BoardWorkspace {
         this.renderList();
         $('conflict').close();
         this.accept(latest);
+        await this.loadCatalog();
       } else if (choice === 'compare') {
         this.latest = await this.api(this.path(`/boards/${local.id}`));
         $('comparison').replaceChildren(
@@ -491,10 +540,15 @@ class BoardWorkspace {
         });
         if (!stillCurrent()) {
           this.notice('The confirmed version was saved. Your current local edits remain here. Compare again before replacing.');
+          await this.loadCatalog();
           return;
         }
+        this.boards = this.boards.map(board => board.id === saved.id ? saved : board);
+        this.renderList();
         $('conflict').close();
         this.accept(saved);
+        // Recovery can create or rename a board; refresh the global chooser too.
+        await this.loadCatalog();
       }
     } catch (error) {
       // Failed recovery retains the entire local board and conflict pause. A
@@ -557,7 +611,7 @@ class BoardWorkspace {
       });
       $('asset-grid').append(button);
     });
-    if (!this.assets.length) $('asset-grid').append(el('p', 'No project images yet. Upload an image, drop one on the canvas, or paste from your clipboard.'));
+    if (!this.assets.length) $('asset-grid').append(el('p', 'No item images yet. Upload an image, drop one on the canvas, or paste from your clipboard.'));
     $('asset-preview').replaceChildren();
     if (this.asset) {
       const img = el('img');
@@ -841,6 +895,10 @@ class BoardWorkspace {
 
   pointerDown(event) {
     if (!this.board) return;
+    // Native canvas controls need their click target and default focus behavior.
+    // Capturing their pointer retargets the click to the canvas. Resize handles
+    // are buttons too, but deliberately participate in canvas gestures.
+    if (event.target.closest('button:not(.resize), a, input, textarea, select')) return;
     if (event.pointerType === 'touch') {
       this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       // Keep two-finger navigation available on iPads in both responsive
@@ -1087,11 +1145,11 @@ class BoardWorkspace {
 
   async upload(files, position = null) {
     if (!this.editable()) return;
-    const board = this.board, project = this.project;
+    const board = this.board, itemId = this.itemId;
     for (const file of files) {
       if (!this.editable() || this.board !== board) break;
       const record = {
-        file, position, name: file.name, state: 'uploading', progress: 0, project, board
+        file, position, name: file.name, state: 'uploading', progress: 0, itemId, board
       };
       this.uploads.push(record);
       this.renderUploads();
@@ -1100,7 +1158,7 @@ class BoardWorkspace {
   }
 
   async uploadOne(record) {
-    if (!this.editable() || this.board !== record.board || this.project !== record.project) return;
+    if (!this.editable() || this.board !== record.board || this.itemId !== record.itemId) return;
     record.state = 'uploading';
     record.progress = 0;
     this.renderUploads();
@@ -1108,7 +1166,7 @@ class BoardWorkspace {
       const asset = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest(), body = new FormData();
         body.append('file', record.file);
-        xhr.open('POST', `/api/projects/${record.project}/assets`);
+        xhr.open('POST', `/api/items/${record.itemId}/board-assets`);
         xhr.responseType = 'json';
         xhr.timeout = 120000;
         xhr.upload.onprogress = event => {
@@ -1123,7 +1181,7 @@ class BoardWorkspace {
       });
       record.state = 'done';
       record.progress = 100;
-      if (this.project === record.project) {
+      if (this.itemId === record.itemId) {
         if (!this.assets.some(a => a.key === asset.key)) this.assets.push(asset);
         this.renderDeck();
       }
@@ -1166,19 +1224,17 @@ class BoardWorkspace {
     bind('workspace-new', () => this.create());
     bind('retry', () => this.save());
     bind('recovery', () => this.showRecovery());
-    $('projects').addEventListener('change', async () => {
-      if (!(await this.canLeave())) {
-        $('projects').value = this.project;
-        return;
-      }
-      this.project = $('projects').value;
-      await this.loadProject();
+    $('board-search').addEventListener('input', () => this.loadCatalog());
+    bind('board-search-retry', () => this.loadCatalog());
+    $('board-results').addEventListener('change', () => {
+      const board = this.catalog.find(board => String(board.id) === $('board-results').value);
+      if (board) this.open(board.id, board.item_id);
     });
     $('switcher').addEventListener('change', () => this.open($('switcher').value));
     bind('back', async () => {
       if (!(await this.canLeave())) return;
       clearTimeout(this.timer);
-      await this.loadProject();
+      await this.loadItemBoards();
     });
     bind('deck-toggle', () => {
       $('deck').hidden = !$('deck').hidden;

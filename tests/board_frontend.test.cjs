@@ -51,16 +51,17 @@ function workspace() {
     });
     return nodes.get(id);
   };
-  const context = { window: { BoardCore: C }, document: { getElementById: node }, console, setTimeout, clearTimeout, confirm: () => true };
+  const context = { window: { BoardCore: C }, document: { getElementById: node }, console, history: { replaceState() {} }, setTimeout, clearTimeout, confirm: () => true };
   vm.createContext(context);
   const source = fs.readFileSync(require.resolve('../app/static/boards.js'), 'utf8').replace('window.boardWorkspace = new BoardWorkspace();', 'window.BoardWorkspace = BoardWorkspace;');
   vm.runInContext(source, context);
   const app = Object.create(context.window.BoardWorkspace.prototype);
-  app.project = 1; app.board = { id: 1, name: 'Local', revision: 1, objects: [{ id: 'text', type: 'text', text: 'local', x: 0, y: 0, width: 100, height: 40 }], view: { x: 0, y: 0, zoom: 1 }, assets: [] };
+  app.itemId = 1; app.board = { id: 1, name: 'Local', revision: 1, objects: [{ id: 'text', type: 'text', text: 'local', x: 0, y: 0, width: 100, height: 40 }], view: { x: 0, y: 0, zoom: 1 }, assets: [] };
   app.boards = [app.board]; app.saveState = new C.SaveState(1); app.saveState.edit(); app.saving = false; app.readOnly = false; app.selected = new Set(['text']); app.history = new C.History(); app.uploads = [];
-  app.pointers = new Map();
+  app.pointers = new Map(); app.loadVersion = 0;
   app.render = () => {}; app.schedule = () => { app.scheduled = (app.scheduled || 0) + 1; };
   app.askConfirm = async () => true;
+  app.loadCatalog = async () => {};
   return { app, node, context };
 }
 test('controller preserves in-flight edits and schedules the next save', async () => {
@@ -93,7 +94,7 @@ test('dismissing recovery during a successful request retains local edits', asyn
   const { app, node } = workspace(), local = C.clone(app.board); app.saveState.conflict = true; node('conflict').open = true;
   const originalAssets = [{ key: 'project:1' }]; app.assets = originalAssets;
   let resolve;
-  app.api = path => path.endsWith('/assets')
+  app.api = path => path.endsWith('/board-assets')
     ? Promise.resolve([{ key: 'project:1' }, { key: 'project:2' }])
     : new Promise(r => { resolve = r; });
   const recovery = app.recover('latest'); await new Promise(setImmediate); node('conflict').close(); resolve({ ...local, revision: 2, objects: [] }); await recovery;
@@ -108,7 +109,7 @@ test('opening latest refreshes the combined library and switcher before acceptin
   const latest = { ...app.board, name: 'Updated name', revision: 2 };
   const assets = [{ key: 'project:1' }, { key: 'project:2' }, { key: 'item:3' }];
   app.assets = [assets[0]];
-  app.api = async path => path.endsWith('/assets') ? assets : latest;
+  app.api = async path => path.endsWith('/board-assets') ? assets : latest;
   let rendered = false, accepted = false;
   app.renderList = () => {
     rendered = true;
@@ -132,7 +133,7 @@ test('library refresh failure preserves the local composition, old deck, and con
   const local = app.board, originalAssets = [{ key: 'project:1' }];
   app.assets = originalAssets;
   app.api = async path => {
-    if (path.endsWith('/assets')) throw new Error('Library unavailable');
+    if (path.endsWith('/board-assets')) throw new Error('Library unavailable');
     return { ...local, revision: 2, objects: [] };
   };
   app.accept = () => assert.fail('Recovery must not discard local work after a failed library refresh');
@@ -151,7 +152,7 @@ test('late recovery results never refresh a different active workspace', async (
   const local = app.board, originalAssets = [{ key: 'project:1' }];
   app.assets = originalAssets;
   let finish;
-  app.api = path => path.endsWith('/assets')
+  app.api = path => path.endsWith('/board-assets')
     ? Promise.resolve([{ key: 'project:2' }])
     : new Promise(resolve => { finish = resolve; });
   app.accept = () => assert.fail('Superseded recovery must not change the active workspace');
@@ -381,7 +382,8 @@ function entryWorkspace(search) {
   state.context.location = { search };
   state.context.URLSearchParams = URLSearchParams;
   state.context.document.createElement = () => ({});
-  state.node('projects').append = () => {};
+  state.app.loadCatalog = async () => {};
+  state.app.itemId = '';
   return state;
 }
 
@@ -389,30 +391,30 @@ test('unscoped or invalid board links never select the first project or create a
   for (const search of ['', '?project=999&create=1']) {
     const { app } = entryWorkspace(search);
     app.api = async () => [{ id: 2, name: 'Project' }];
-    app.loadProject = async () => false;
+    app.loadItemBoards = async () => false;
     app.create = async () => assert.fail('Unexpected board creation');
     await app.start();
-    assert.equal(app.project, '');
+    assert.equal(app.itemId, '');
   }
 });
 
-test('project entry only requests creation for explicit create intent after successful load', async () => {
-  for (const [query, loaded, expected] of [['?project=2', true, 0], ['?project=2&create=1', true, 1], ['?project=2&create=1', false, 0]]) {
+test('item entry only requests creation for explicit create intent after successful load', async () => {
+  for (const [query, loaded, expected] of [['?item=2', true, 0], ['?item=2&create=1', true, 1], ['?item=2&create=1', false, 0]]) {
     const { app } = entryWorkspace(query);
     app.api = async () => [{ id: 2, name: 'Project' }];
-    app.loadProject = async () => loaded;
+    app.loadItemBoards = async () => loaded;
     let created = 0;
     app.create = async () => { created++; };
     await app.start();
-    assert.equal(app.project, '2');
+    assert.equal(app.itemId, '2');
     assert.equal(created, expected);
   }
 });
 
 test('named board link opens its board without creating another', async () => {
-  const { app } = entryWorkspace('?project=2&board=7');
+  const { app } = entryWorkspace('?item=2&board=7');
   app.api = async () => [{ id: 2, name: 'Project' }];
-  app.loadProject = async () => true;
+  app.loadItemBoards = async () => true;
   app.open = async id => { assert.equal(id, '7'); app.opened = true; };
   app.create = async () => assert.fail('Unexpected board creation');
   await app.start();
@@ -427,12 +429,13 @@ test('cancelling board naming performs no writes and confirmed creation opens th
   await app.create();
   app.askName = async () => 'My board';
   app.api = async (path, options) => {
-    assert.equal(path, '/api/projects/1/boards');
+    assert.equal(path, '/api/items/1/boards');
     assert.equal(options.method, 'POST');
     assert.deepEqual(JSON.parse(options.body), { name: 'My board' });
     return { id: 8, name: 'My board' };
   };
   app.renderList = () => {};
+  app.loadCatalog = async () => {};
   app.accept = board => { app.board = board; };
   await app.create();
   assert.equal(app.board.id, 8);
@@ -454,27 +457,185 @@ function dashboard() {
   return context.window.ideaDockApp();
 }
 
-test('project board listings ignore stale responses and clear when no project is selected', async () => {
+test('item board listings ignore stale responses and clear when no item is selected', async () => {
   const app = dashboard(), pending = [];
   app.fetchJson = () => new Promise(resolve => pending.push(resolve));
-  const first = app.loadProjectBoards('1');
-  const second = app.loadProjectBoards('2');
+  const first = app.loadItemBoards('1');
+  const second = app.loadItemBoards('2');
   pending[1]([{ id: 20 }]); await second;
   pending[0]([{ id: 10 }]); await first;
-  assert.equal(app.projectBoards[0].id, 20);
-  await app.loadProjectBoards('');
-  assert.equal(app.projectBoards.length, 0);
-  assert.equal(app.projectBoardsLoading, false);
+  assert.equal(app.itemBoards[0].id, 20);
+  await app.loadItemBoards('');
+  assert.equal(app.itemBoards.length, 0);
+  assert.equal(app.itemBoardsLoading, false);
 });
 
-test('failed project board listing reports failure instead of claiming the project is empty', async () => {
+test('failed item board listing reports failure instead of claiming the item is empty', async () => {
   const app = dashboard();
   app.fetchJson = async () => { throw new Error('Offline'); };
-  await app.loadProjectBoards('1');
-  assert.equal(app.projectBoardsError, 'Offline');
-  assert.equal(app.projectBoardsLoading, false);
+  await app.loadItemBoards('1');
+  assert.equal(app.itemBoardsError, 'Offline');
+  assert.equal(app.itemBoardsLoading, false);
   app.fetchJson = async () => [{ id: 10 }];
-  await app.loadProjectBoards('1');
-  assert.equal(app.projectBoardsError, '');
-  assert.equal(app.projectBoards.length, 1);
+  await app.loadItemBoards('1');
+  assert.equal(app.itemBoardsError, '');
+  assert.equal(app.itemBoards.length, 1);
+});
+
+
+test('home board search ignores stale results and searches board names', async () => {
+  const app = dashboard(), pending = [];
+  app.fetchJson = url => new Promise(resolve => pending.push({ url, resolve }));
+  app.boardQuery = 'First'; const first = app.searchBoards();
+  app.boardQuery = 'Second & plan'; const second = app.searchBoards();
+  assert.equal(pending[1].url, '/api/boards?q=Second%20%26%20plan');
+  pending[1].resolve([{ id: 2, name: 'Second & plan', item_id: 4 }]); await second;
+  pending[0].resolve([{ id: 1 }]); await first;
+  assert.equal(app.boardResults[0].id, 2);
+  assert.equal(app.boardSearchLoading, false);
+  assert.equal(app.boardCreateUrl(4), '/static/boards.html?item=4&create=1');
+  assert.equal(app.boardUrl(4, 2), '/static/boards.html?item=4&board=2');
+});
+
+test('home board search errors clear results and retry recovers', async () => {
+  const app = dashboard();
+  app.fetchJson = async () => { throw new Error('Offline'); };
+  await app.searchBoards();
+  assert.equal(app.boardSearchError, 'Offline');
+  assert.equal(app.boardResults.length, 0);
+  app.fetchJson = async () => [{ id: 1, name: 'Board' }];
+  await app.searchBoards();
+  assert.equal(app.boardSearchError, '');
+  assert.equal(app.boardResults[0].name, 'Board');
+});
+
+function catalogWorkspace() {
+  const state = workspace();
+  delete state.app.loadCatalog;
+  state.context.document.createElement = tag => ({ tag, textContent: '', value: '' });
+  const select = state.node('board-results');
+  select.children = [];
+  select.replaceChildren = child => { select.children = [child]; select.firstChild = child; };
+  select.append = child => select.children.push(child);
+  return state;
+}
+
+test('workspace search labels duplicate boards with their owners and ignores stale results', async () => {
+  const { app, node } = catalogWorkspace(), pending = [];
+  app.api = url => new Promise(resolve => pending.push({ url, resolve }));
+  node('board-search').value = 'Old'; const first = app.loadCatalog();
+  node('board-search').value = 'Plan'; const second = app.loadCatalog();
+  assert.equal(pending[1].url, '/api/boards?q=Plan');
+  pending[1].resolve([{ id: 2, name: 'Plan', item_id: 3, item_title: 'Kitchen' }, { id: 4, name: 'Plan', item_id: 5, item_title: 'Garden' }]);
+  await second; pending[0].resolve([]); await first;
+  assert.equal(app.catalog.length, 2);
+  assert.equal(node('board-results').children[1].textContent, 'Plan — Kitchen');
+  assert.equal(node('board-results').children[2].value, 4);
+  assert.equal(node('board-results').disabled, false);
+});
+
+test('workspace search reports errors, disables stale choices, and can retry', async () => {
+  const { app, node } = catalogWorkspace();
+  app.api = async () => { throw new Error('Offline'); };
+  await app.loadCatalog();
+  assert.equal(node('board-results').disabled, true);
+  assert.equal(node('board-search-retry').hidden, false);
+  app.api = async () => [];
+  await app.loadCatalog();
+  assert.equal(node('board-search-status').textContent, 'No matching visual boards.');
+  assert.equal(node('board-search-retry').hidden, true);
+});
+
+test('cross-owner board selection commits owner and deck together after successful load', async () => {
+  const { app } = workspace(), calls = [], board = { id: 9, item_id: 7, name: 'Destination' };
+  app.canLeave = async () => true;
+  app.renderList = () => {};
+  app.accept = value => { app.board = value; };
+  app.api = async path => {
+    calls.push(path);
+    if (path.endsWith('/boards/9')) return board;
+    if (path.endsWith('/board-assets')) return [{ key: 'project:8' }];
+    if (path.endsWith('/boards')) return [board];
+    return { id: 7, title: 'Owner' };
+  };
+  await app.open(9, 7);
+  assert.equal(app.itemId, '7');
+  assert.equal(app.board.id, 9);
+  assert.equal(app.assets[0].key, 'project:8');
+  assert.ok(calls.every(path => path.startsWith('/api/items/7')));
+});
+
+test('cancelled or failed cross-owner selection preserves local board and owner', async () => {
+  const { app } = workspace(), original = app.board;
+  app.canLeave = async () => false;
+  app.api = async () => assert.fail('Cancelled switch made a request');
+  await app.open(9, 7);
+  assert.equal(app.itemId, 1);
+  app.canLeave = async () => true;
+  app.api = async () => { throw new Error('Offline'); };
+  await app.open(9, 7);
+  assert.equal(app.itemId, 1);
+  assert.equal(app.board, original);
+  assert.equal(app.saveState.dirty, true);
+  assert.equal(app.scheduled, 1);
+});
+
+
+test('empty editor board links do not invent an owner ID', () => {
+  const app = dashboard();
+  assert.equal(app.boardCreateUrl(null), '#');
+  assert.equal(app.boardCreateUrl(undefined), '#');
+  assert.equal(app.boardUrl(undefined, 2), '#');
+  assert.equal(app.boardUrl(2, undefined), '#');
+});
+
+
+test('successful copy, latest, and replace recovery refresh the global board-name chooser', async () => {
+  for (const choice of ['copy', 'latest', 'replace']) {
+    const { app, node } = catalogWorkspace();
+    app.saveState.conflict = true;
+    node('conflict').open = true;
+    node('comparison').hidden = false;
+    app.latest = { revision: 2 };
+    app.askName = async () => 'Recovered copy';
+    app.renderList = () => {};
+    app.accept = board => { app.board = board; };
+    const saved = { ...app.board, id: choice === 'copy' ? 8 : 1, name: 'Recovered name', revision: 3 };
+    const paths = [];
+    app.api = async path => {
+      paths.push(path);
+      if (path.startsWith('/api/boards?')) return [{ ...saved, item_id: 1, item_title: 'Owner' }];
+      if (path.endsWith('/board-assets')) return [];
+      return saved;
+    };
+    await app.recover(choice);
+    assert.equal(app.board.id, saved.id);
+    assert.equal(app.catalog[0].name, 'Recovered name');
+    assert.equal(node('board-results').children[1].textContent, 'Recovered name — Owner');
+    assert.equal(node('board-results').value, saved.id);
+    assert.equal(paths.filter(path => path.startsWith('/api/boards?')).length, 1);
+  }
+});
+
+
+test('empty-canvas controls keep native mouse and touch clicks without pointer capture', () => {
+  for (const pointerType of ['mouse', 'touch']) {
+    const { app, node } = interactionWorkspace();
+    app.board.objects = [];
+    let captured = 0, prevented = 0;
+    node('canvas').setPointerCapture = () => { captured++; };
+    const edits = [];
+    app.edit = type => edits.push(type);
+    node('files').click = () => edits.push('upload');
+    for (const [id, expected] of [['empty-text', 'text'], ['empty-swatch', 'swatch'], ['empty-upload', 'upload']]) {
+      const target = { closest: selector => selector.includes('button:not(.resize)') ? {} : null };
+      node('canvas').listeners.pointerdown({ pointerType, pointerId: 1, button: 0, target, preventDefault() { prevented++; } });
+      node(id).listeners.click();
+      assert.equal(edits.at(-1), expected);
+    }
+    assert.equal(captured, 0);
+    assert.equal(prevented, 0);
+    assert.equal(app.gesture, undefined);
+    assert.equal(app.pointers.size, 0);
+  }
 });

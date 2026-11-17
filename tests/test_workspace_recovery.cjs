@@ -20,13 +20,14 @@ function workspace() {
   nodes.clear();
   const w = Object.create(context.window.TestWorkspace.prototype);
   Object.assign(w, {
-    project: 1,
+    itemId: 1,
     board: { id: 1, name: 'Local', revision: 1, objects: [{ id: 'label', type: 'text', text: 'Unsaved', x: 1, y: 2, width: 30, height: 20 }], view: { x: 0, y: 0, zoom: 1 }, assets: [] },
     boards: [], selected: new Set(['label']), readOnly: false,
     history: new C.History(), saveState: new C.SaveState(1), saving: false,
   });
   w.saveState.edit(); w.saveState.conflict = true;
   w.render = () => {}; w.renderList = () => {};
+  w.loadCatalog = async () => {};
   w.accept = board => { w.accepted = board; }; w.comparison = () => ({});
   // Async dialogs are UI boundaries. Awaited test functions make an accidentally
   // unresolved dialog fail node:test instead of silently exiting with code zero.

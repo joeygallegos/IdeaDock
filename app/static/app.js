@@ -50,10 +50,15 @@ Call bank about payoff #money #house -task @chase !high due:2026-04-20`,
     },
     items: [],
     projectItems: [],
-    projectBoards: [],
-    projectBoardsLoading: false,
-    projectBoardsError: "",
-    projectBoardsRequest: 0,
+    itemBoards: [],
+    itemBoardsLoading: false,
+    itemBoardsError: "",
+    itemBoardsRequest: 0,
+    boardQuery: "",
+    boardResults: [],
+    boardSearchLoading: false,
+    boardSearchError: "",
+    boardSearchRequest: 0,
     epics: [],
     entities: [],
     selectedItem: null,
@@ -135,7 +140,9 @@ Call bank about payoff #money #house -task @chase !high due:2026-04-20`,
         currentInstanceId: this.instanceId,
       });
 
-      await Promise.all([this.loadLookups(), this.loadSummary(), this.loadProjectOverview(), this.loadItems()]);
+      await Promise.all([this.loadLookups(), this.loadSummary(), this.loadProjectOverview(), this.loadItems(), this.searchBoards()]);
+      const itemId = new URLSearchParams(location.search).get("item");
+      if (itemId) await this.openFocusModeForItem(itemId);
     },
 
     async fetchJson(url, options = {}) {
@@ -200,25 +207,52 @@ Call bank about payoff #money #house -task @chase !high due:2026-04-20`,
       this.loadItems();
     },
 
-    async loadProjectBoards(projectId) {
-      // A late response must never show another project's boards after selection changes.
-      const request = ++this.projectBoardsRequest;
-      this.projectBoards = [];
-      this.projectBoardsError = "";
-      this.projectBoardsLoading = Boolean(projectId);
-      if (!projectId) return;
+    async loadItemBoards(itemId) {
+      // A previous editor's response must not replace the current item's boards.
+      const request = ++this.itemBoardsRequest;
+      this.itemBoards = [];
+      this.itemBoardsError = "";
+      this.itemBoardsLoading = Boolean(itemId);
+      if (!itemId) return;
       try {
-        const boards = await this.fetchJson(`/api/projects/${encodeURIComponent(projectId)}/boards`);
-        if (request === this.projectBoardsRequest) this.projectBoards = boards;
+        const boards = await this.fetchJson(`/api/items/${encodeURIComponent(itemId)}/boards`);
+        if (request === this.itemBoardsRequest) this.itemBoards = boards;
       } catch (error) {
-        if (request === this.projectBoardsRequest) this.projectBoardsError = error.message;
+        if (request === this.itemBoardsRequest) this.itemBoardsError = error.message;
       } finally {
-        if (request === this.projectBoardsRequest) this.projectBoardsLoading = false;
+        if (request === this.itemBoardsRequest) this.itemBoardsLoading = false;
       }
     },
 
-    boardCreateUrl(projectId) {
-      return `/static/boards.html?project=${encodeURIComponent(projectId)}&create=1`;
+    async searchBoards() {
+      const request = ++this.boardSearchRequest;
+      this.boardResults = [];
+      this.boardSearchLoading = true;
+      this.boardSearchError = "";
+      try {
+        const boards = await this.fetchJson(`/api/boards?q=${encodeURIComponent(this.boardQuery)}`);
+        if (request === this.boardSearchRequest) this.boardResults = boards;
+      } catch (error) {
+        if (request === this.boardSearchRequest) this.boardSearchError = error.message;
+      } finally {
+        if (request === this.boardSearchRequest) this.boardSearchLoading = false;
+      }
+    },
+
+    openBoardResult(boardId) {
+      const board = this.boardResults.find(board => String(board.id) === String(boardId));
+      if (board) location.assign(this.boardUrl(board.item_id, board.id));
+    },
+
+    boardUrl(itemId, boardId) {
+      if (!itemId || !boardId) return "#";
+      return `/static/boards.html?item=${encodeURIComponent(itemId)}&board=${encodeURIComponent(boardId)}`;
+    },
+
+    boardCreateUrl(itemId) {
+      // Alpine evaluates hidden editor bindings before an item is selected.
+      if (!itemId) return "#";
+      return `/static/boards.html?item=${encodeURIComponent(itemId)}&create=1`;
     },
 
     projectOpenCount(epicId) {
@@ -409,6 +443,7 @@ Call bank about payoff #money #house -task @chase !high due:2026-04-20`,
     },
 
     openFocusMode() {
+      this.loadItemBoards(this.selectedItem?.id);
       if (!this.selectedItem) {
         return;
       }

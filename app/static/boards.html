@@ -10,11 +10,16 @@
   </head>
   <body>
     <header>
-      <a id="project-back" href="/">‹ Project</a>
-      <label>
-        Project
-        <select id="projects" aria-label="Project"><option value="">Choose a project</option></select>
+      <a id="item-back" href="/">‹ IdeaDock</a>
+      <label for="board-search">Search visual boards
+        <input id="board-search" type="search" placeholder="Board name">
       </label>
+      <label for="board-results">Visual Board
+        <select id="board-results"><option value="">Choose a visual board</option></select>
+      </label>
+      <span id="board-search-status" role="status" aria-live="polite"></span>
+      <button id="board-search-retry" hidden>Retry board search</button>
+      <span id="board-owner"></span>
       <h1>Visual boards</h1>
       <span id="view-only" hidden>View only</span>
       <span id="status" role="status" aria-live="polite"></span>
@@ -24,7 +29,7 @@
     <p id="message" role="status" hidden></p>
     <main id="list">
       <div class="list-heading">
-        <p>Create a named board for your project, then upload images inside it.</p>
+        <p>Create a named board for this item, then upload images inside it.</p>
         <button id="new-board" class="primary edit" disabled>Create board</button>
       </div>
       <div id="boards" class="cards"></div>
@@ -41,7 +46,7 @@
       </nav>
       <div class="work-area">
         <aside id="deck">
-          <h2>Project images</h2>
+          <h2>Item images</h2>
           <label class="search">
             Search images
             <input id="search" type="search">

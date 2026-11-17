@@ -243,7 +243,8 @@ class ProjectAsset(Base):
     __tablename__ = "project_assets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("epics.id", ondelete="RESTRICT"), index=True)
+    # Keep the legacy table/source kind so saved image keys remain valid.
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id", ondelete="RESTRICT"), index=True)
     file_path: Mapped[str] = mapped_column(String(255))
     original_filename: Mapped[str] = mapped_column(String(255))
     caption: Mapped[str | None] = mapped_column(String(255))
@@ -258,7 +259,7 @@ class VisualBoard(TimestampMixin, Base):
     __tablename__ = "visual_boards"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("epics.id", ondelete="RESTRICT"), index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id", ondelete="RESTRICT"), index=True)
     name: Mapped[str] = mapped_column(String(120))
     revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     # Layout is independent of item records; references below enforce asset lifetime.
